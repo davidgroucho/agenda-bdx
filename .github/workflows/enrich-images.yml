@@ -1,0 +1,48 @@
+name: Enrich event images
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub schedules use UTC.
+    # 03:30 UTC ~ 04:30 in summer (Paris) and 04:30 UTC ~ 05:30 in winter, adjust as you like.
+    - cron: "30 3 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run enrichment script
+        run: node scripts/enrich-images.mjs
+        env:
+          MAX_EVENTS: "500"
+          CONCURRENCY: "3"
+          MIN_WIDTH: "1200"
+          # Allow only licenses that work for most use-cases (no NC/ND by default)
+          ALLOWED_LICENSES: "cc0,pdm,by,by-sa"
+
+      - name: Commit & push if changed
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add assets/event-images.json
+          git commit -m "chore: update event image map"
+          git push
