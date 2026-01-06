@@ -3,28 +3,463 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Agenda Culture – Bordeaux Métropole</title>
+  <title>Agenda Culture — Bordeaux Métropole</title>
+  <meta name="description" content="Concerts, expos, théâtre et plus — agrégé depuis l'open data de Bordeaux Métropole." />
+
+  <style>
+    :root { --bg:#0b0c10; --panel:#11131a; --card:#141826; --text:#e9ecf1; --muted:#a7b0c0; --line:rgba(255,255,255,.10); }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji"; background: radial-gradient(1200px 600px at 20% -10%, rgba(98, 0, 255, .35), transparent 60%),
+                                                   radial-gradient(1000px 600px at 90% 0%, rgba(0, 255, 180, .18), transparent 55%),
+                                                   var(--bg);
+           color: var(--text); }
+    a { color: inherit; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px; }
+    header { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; justify-content:space-between; margin-bottom: 12px; }
+    .brand { display:flex; flex-direction:column; gap:6px; }
+    .brand h1 { margin:0; font-size: 18px; letter-spacing:.2px; }
+    .brand p { margin:0; color: var(--muted); font-size: 13px; }
+
+    .panel { background: rgba(17,19,26,.72); border: 1px solid var(--line); border-radius: 18px; padding: 12px; backdrop-filter: blur(10px); }
+    .controls { display:grid; grid-template-columns: 1.4fr 1fr; gap: 10px; align-items: start; }
+    @media (max-width: 860px) { .controls { grid-template-columns: 1fr; } }
+
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .field { display:flex; flex-direction:column; gap:6px; min-width: 220px; flex: 1; }
+    label { font-size: 12px; color: var(--muted); }
+    input[type="text"] { width: 100%; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: rgba(20,24,38,.7); color: var(--text); outline:none; }
+    input[type="text"]::placeholder { color: rgba(167,176,192,.75); }
+
+    .chips { display:flex; flex-wrap:wrap; gap:8px; }
+    .chip { user-select:none; cursor:pointer; border: 1px solid var(--line); background: rgba(20,24,38,.55);
+            padding: 8px 10px; border-radius: 999px; font-size: 12px; color: var(--text); }
+    .chip[data-on="1"] { background: rgba(98, 0, 255, .22); border-color: rgba(98, 0, 255, .55); }
+
+    .toggles { display:flex; gap:10px; flex-wrap:wrap; }
+    .toggle { display:flex; align-items:center; gap:8px; padding: 8px 10px; border-radius: 14px;
+              border: 1px solid var(--line); background: rgba(20,24,38,.55); font-size: 12px; }
+    .toggle input { transform: translateY(1px); }
+
+    .meta { color: var(--muted); font-size: 13px; margin: 10px 0 14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .dot { opacity:.5; }
+
+    .grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+    @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+
+    .card { background: rgba(20,24,38,.78); border: 1px solid var(--line); border-radius: 18px; overflow:hidden; display:flex; flex-direction:column; min-height: 220px; }
+    .thumb { width:100%; aspect-ratio: 16/9; background: rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center; }
+    .thumb img { width:100%; height:100%; object-fit: cover; display:block; }
+    .content { padding: 12px; display:flex; flex-direction:column; gap: 8px; flex: 1; }
+    .title { font-weight: 780; font-size: 15px; line-height: 1.25; }
+    .sub { font-size: 12px; color: var(--muted); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--text); }
+    .desc { font-size: 13px; color: rgba(233,236,241,.92); line-height:1.35; margin:0; }
+    .actions { margin-top:auto; display:flex; justify-content:space-between; gap:10px; align-items:center; padding-top: 4px; }
+    .btn { display:inline-flex; align-items:center; gap:8px; padding: 8px 10px; border-radius: 12px;
+           border: 1px solid var(--line); background: rgba(255,255,255,.04); text-decoration:none; font-size: 12px; }
+    .btn:hover { background: rgba(255,255,255,.07); }
+    .mutedlink { color: rgba(167,176,192,.95); text-decoration:none; font-size: 12px; }
+    .mutedlink:hover { text-decoration: underline; }
+
+    .footer { display:flex; justify-content:center; margin: 16px 0 30px; }
+    .load { cursor:pointer; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line);
+            background: rgba(98,0,255,.18); color: var(--text); font-weight: 650; }
+    .load:disabled { opacity: .55; cursor:not-allowed; }
+
+    .error { white-space: pre-wrap; color: #ffb4b4; background: rgba(255, 0, 0, .08); border: 1px solid rgba(255,0,0,.20); padding: 10px 12px; border-radius: 14px; margin-top: 10px; display:none; }
+  </style>
 </head>
+
 <body>
-  <h1>Agenda Culture – Bordeaux Métropole</h1>
-  <div id="status">Chargement…</div>
-  <pre id="out"></pre>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1>Agenda Culture — Bordeaux Métropole</h1>
+        <p>Concerts, expos, théâtre… (open data) — “à ta sauce”.</p>
+      </div>
+      <div class="meta" id="status">Chargement…</div>
+    </header>
+
+    <section class="panel controls">
+      <div class="field">
+        <label for="search">Recherche</label>
+        <input id="search" type="text" placeholder="ex: théâtre, Capc, jazz, Darwin…" />
+      </div>
+
+      <div class="field">
+        <label>Filtres</label>
+        <div class="row">
+          <div class="toggles">
+            <label class="toggle"><input type="checkbox" id="onlyFree" /> Gratuit</label>
+            <label class="toggle"><input type="checkbox" id="onlyPaid" /> Payant</label>
+          </div>
+          <div class="field" style="min-width:220px; flex:1;">
+            <input id="place" type="text" placeholder="commune/quartier (ex: Pessac, Chartrons…)" />
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Catégories (client-side)</label>
+        <div class="chips" id="chips">
+          <span class="chip" data-key="concert" data-on="1">Concert</span>
+          <span class="chip" data-key="expo" data-on="1">Expo</span>
+          <span class="chip" data-key="theatre" data-on="1">Théâtre</span>
+          <span class="chip" data-key="festival" data-on="1">Festival</span>
+          <span class="chip" data-key="cinema" data-on="0">Cinéma</span>
+          <span class="chip" data-key="autre" data-on="0">Autre</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="error" id="err"></div>
+
+    <section class="grid" id="list" style="margin-top:12px;"></section>
+
+    <div class="footer">
+      <button class="load" id="loadMore">Afficher plus</button>
+    </div>
+  </div>
 
   <script>
-    const API =
-      "https://datahub.bordeaux-metropole.fr/api/explore/v2.1/catalog/datasets/met_agenda/records?limit=5";
+    // DataHub Bordeaux Métropole (Opendatasoft Explore API v2.1)
+    const BASE = "https://datahub.bordeaux-metropole.fr/api/explore/v2.1/catalog/datasets/met_agenda/records";
 
-    fetch(API)
-      .then(r => r.json())
-      .then(data => {
-        document.getElementById("status").textContent = "OK";
-        document.getElementById("out").textContent = JSON.stringify(data.records?.[0] ?? data, null, 2);
-      })
-      .catch(err => {
-        document.getElementById("status").textContent = "Erreur (souvent CORS)";
-        document.getElementById("out").textContent = String(err);
-        console.error(err);
+    // Fields confirmed from your console:
+    const DATE_FIELD = "firstdate_begin";
+    const END_FIELD = "firstdate_end";
+
+    // Reduce payload (keep only what we need)
+    const SELECT_FIELDS = [
+      "uid","slug","title_fr","description_fr","longdescription_fr",
+      "daterange_fr", DATE_FIELD, END_FIELD,
+      "keywords_fr","originagenda_title","updatedat",
+      "conditions_fr","links","onlineaccesslink",
+      "location_name","location_address","location_postalcode","location_city","location_district",
+      "location_coordinates","location_image","location_imagecredits","location_website","location_links"
+    ].join(",");
+
+    // Default upstream search query (broad on purpose; we add stricter client-side filtering too)
+    const CULTURE_Q = '(concert OR expo OR exposition OR théâtre OR theatre OR spectacle OR scène OR "musique" OR "festival" OR "performance" OR "danse")';
+
+    // Pagination
+    const PAGE_SIZE = 24;
+    let offset = 0;
+    let all = []; // accumulated events
+
+    function addMonths(d, n) {
+      const x = new Date(d);
+      x.setMonth(x.getMonth() + n);
+      return x;
+    }
+    function isoDate(d) { return d.toISOString().slice(0,10); }
+
+    function buildApiUrl({ q = CULTURE_Q, limit = PAGE_SIZE, offset = 0 } = {}) {
+      const now = new Date();
+      const end = addMonths(now, 6);
+      const where = `${DATE_FIELD} >= date'${isoDate(now)}' AND ${DATE_FIELD} < date'${isoDate(end)}'`;
+
+      const u = new URL(BASE);
+      u.searchParams.set("select", SELECT_FIELDS);
+      u.searchParams.set("q", q);
+      u.searchParams.set("where", where);
+      u.searchParams.set("order_by", `${DATE_FIELD} asc`);
+      u.searchParams.set("limit", String(limit));
+      u.searchParams.set("offset", String(offset));
+      return u.toString();
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+
+    function firstUrlFromAny(value) {
+      // value can be null, string, array, object…
+      if (!value) return "";
+      if (typeof value === "string") return value;
+
+      // Array of strings/objects
+      if (Array.isArray(value)) {
+        for (const v of value) {
+          const u = firstUrlFromAny(v);
+          if (u) return u;
+        }
+        return "";
+      }
+
+      // Object: try common keys, else scan
+      if (typeof value === "object") {
+        const candidates = ["url","href","link","website","value"];
+        for (const k of candidates) {
+          if (value[k] && typeof value[k] === "string") return value[k];
+        }
+        for (const k of Object.keys(value)) {
+          const u = firstUrlFromAny(value[k]);
+          if (u) return u;
+        }
+      }
+      return "";
+    }
+
+    function normalize(row) {
+      const f = row?.record?.fields ?? row?.fields ?? row ?? {};
+      const title = f.title_fr ?? "(sans titre)";
+      const desc = f.description_fr ?? "";
+      const longdesc = f.longdescription_fr ?? "";
+      const keywords = f.keywords_fr ?? "";
+      const dateLabel = f.daterange_fr ?? "";
+
+      const venue = f.location_name ?? "";
+      const addressParts = [f.location_address, f.location_postalcode, f.location_city].filter(Boolean);
+      const address = addressParts.join(", ");
+      const district = f.location_district ?? "";
+      const city = f.location_city ?? "";
+
+      const image = f.location_image ?? "";
+      const imageCredits = f.location_imagecredits ?? "";
+
+      // Links are often null; try multiple sources
+      const externalUrl =
+        firstUrlFromAny(f.links) ||
+        (typeof f.onlineaccesslink === "string" ? f.onlineaccesslink : "") ||
+        (typeof f.location_website === "string" ? f.location_website : "") ||
+        firstUrlFromAny(f.location_links) ||
+        "";
+
+      // Price/free info: best-effort from conditions_fr (often null)
+      const conditions = (f.conditions_fr ?? "").toString();
+      const isFree = /\bgratuit\b/i.test(conditions) || /\bfree\b/i.test(conditions);
+      const isPaid = /\b(\d+ ?€|euros?)\b/i.test(conditions) || /\bpayant\b/i.test(conditions);
+
+      return {
+        uid: f.uid,
+        slug: f.slug,
+        title,
+        desc,
+        longdesc,
+        keywords,
+        dateLabel,
+        start: f[DATE_FIELD] ?? null,
+        end: f[END_FIELD] ?? null,
+        agenda: f.originagenda_title ?? "",
+        venue, address, district, city,
+        image, imageCredits,
+        externalUrl,
+        conditions,
+        isFree,
+        isPaid
+      };
+    }
+
+    // Client-side category matching (you can tweak these keywords freely)
+    const CATEGORY_RULES = {
+      concert:  /\b(concert|live|dj|musique|jazz|rock|hip[- ]?hop|electro|orchestre)\b/i,
+      expo:     /\b(expo|exposition|vernissage|musée|museum|galerie|photograph|peinture|sculpture)\b/i,
+      theatre:  /\b(théâtre|theatre|spectacle|scène|scene|comédie|comedie|impro|pièce|piece)\b/i,
+      festival: /\b(festival)\b/i,
+      cinema:   /\b(cinéma|cinema|film|projection)\b/i
+    };
+
+    function activeCategories() {
+      const on = [...document.querySelectorAll(".chip")].filter(c => c.dataset.on === "1").map(c => c.dataset.key);
+      return new Set(on);
+    }
+
+    function matchesActiveCategories(ev) {
+      const act = activeCategories();
+      if (act.size === 0) return true;
+
+      const hay = `${ev.title}\n${ev.desc}\n${ev.keywords}`.toLowerCase();
+      let matched = false;
+
+      for (const key of act) {
+        if (key === "autre") continue;
+        const re = CATEGORY_RULES[key];
+        if (re && re.test(hay)) matched = true;
+      }
+
+      // "Autre" means: allow things that don't match the main categories
+      if (act.has("autre")) {
+        const anyMain = ["concert","expo","theatre","festival","cinema"].some(k => CATEGORY_RULES[k].test(hay));
+        if (!anyMain) matched = true;
+      }
+
+      return matched;
+    }
+
+    function matchesText(ev, q) {
+      if (!q) return true;
+      const hay = `${ev.title}\n${ev.desc}\n${ev.venue}\n${ev.city}\n${ev.district}\n${ev.keywords}`.toLowerCase();
+      return hay.includes(q.toLowerCase());
+    }
+
+    function matchesPlace(ev, q) {
+      if (!q) return true;
+      const hay = `${ev.city}\n${ev.district}\n${ev.venue}\n${ev.address}`.toLowerCase();
+      return hay.includes(q.toLowerCase());
+    }
+
+    function matchesPrice(ev) {
+      const onlyFree = document.getElementById("onlyFree").checked;
+      const onlyPaid = document.getElementById("onlyPaid").checked;
+
+      // If both unchecked: no filter
+      if (!onlyFree && !onlyPaid) return true;
+
+      // If we don't know price info, don't hide it aggressively:
+      if (!ev.conditions) return true;
+
+      if (onlyFree && onlyPaid) return true;
+      if (onlyFree) return ev.isFree;
+      if (onlyPaid) return ev.isPaid || (!ev.isFree && ev.conditions);
+      return true;
+    }
+
+    function render(ev) {
+      const where = [ev.venue, ev.district || ev.city].filter(Boolean).join(" · ");
+      const addr = ev.address ? `<span class="badge">${escapeHtml(ev.address)}</span>` : "";
+      const price = ev.conditions ? `<span class="badge">${escapeHtml(ev.conditions.slice(0, 40))}${ev.conditions.length>40?"…":""}</span>` : `<span class="badge">Tarif : à vérifier</span>`;
+      const img = ev.image ? `<img src="${escapeHtml(ev.image)}" alt="${escapeHtml(ev.title)}">` : "";
+
+      // internal permalink (shareable)
+      const internal = `#uid=${encodeURIComponent(ev.uid)}&slug=${encodeURIComponent(ev.slug || "")}`;
+
+      return `
+        <article class="card" data-uid="${escapeHtml(ev.uid)}">
+          <div class="thumb">${img || `<span class="sub">Aucune image</span>`}</div>
+          <div class="content">
+            <div class="title">${escapeHtml(ev.title)}</div>
+            <div class="sub">
+              <span class="badge">${escapeHtml(ev.dateLabel || "Date à confirmer")}</span>
+              ${where ? `<span class="badge">${escapeHtml(where)}</span>` : ""}
+            </div>
+            ${ev.desc ? `<p class="desc">${escapeHtml(ev.desc).slice(0, 220)}${ev.desc.length>220?"…":""}</p>` : ""}
+            <div class="sub" style="gap:6px;">
+              ${price}
+              ${addr}
+            </div>
+            <div class="actions">
+              <a class="mutedlink" href="${internal}">Détails</a>
+              ${ev.externalUrl ? `<a class="btn" href="${escapeHtml(ev.externalUrl)}" target="_blank" rel="noreferrer">Lien officiel</a>` : `<span class="sub">Pas de lien</span>`}
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function applyFiltersAndRender() {
+      const q = document.getElementById("search").value.trim();
+      const place = document.getElementById("place").value.trim();
+
+      const filtered = all
+        .filter(ev => matchesActiveCategories(ev))
+        .filter(ev => matchesText(ev, q))
+        .filter(ev => matchesPlace(ev, place))
+        .filter(ev => matchesPrice(ev));
+
+      document.getElementById("status").textContent = `${filtered.length} événements affichés · ${all.length} chargés`;
+      document.getElementById("list").innerHTML = filtered.map(render).join("");
+    }
+
+    function showError(msg) {
+      const el = document.getElementById("err");
+      el.style.display = "block";
+      el.textContent = msg;
+    }
+    function clearError() {
+      const el = document.getElementById("err");
+      el.style.display = "none";
+      el.textContent = "";
+    }
+
+    async function fetchNextPage() {
+      clearError();
+      const btn = document.getElementById("loadMore");
+      btn.disabled = true;
+      btn.textContent = "Chargement…";
+
+      try {
+        const url = buildApiUrl({ offset, limit: PAGE_SIZE });
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
+
+        const data = await res.json();
+        const rows = data.results || data.records || [];
+        const events = rows.map(normalize);
+
+        // Append, de-dupe by uid
+        const seen = new Set(all.map(e => e.uid));
+        for (const ev of events) {
+          if (!ev.uid || seen.has(ev.uid)) continue;
+          seen.add(ev.uid);
+          all.push(ev);
+        }
+
+        offset += PAGE_SIZE;
+        applyFiltersAndRender();
+
+      } catch (e) {
+        showError(String(e?.stack || e?.message || e));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Afficher plus";
+      }
+    }
+
+    function wireUI() {
+      // Debounce for inputs
+      let t = null;
+      const rerenderDebounced = () => {
+        clearTimeout(t);
+        t = setTimeout(applyFiltersAndRender, 200);
+      };
+
+      document.getElementById("search").addEventListener("input", rerenderDebounced);
+      document.getElementById("place").addEventListener("input", rerenderDebounced);
+      document.getElementById("onlyFree").addEventListener("change", applyFiltersAndRender);
+      document.getElementById("onlyPaid").addEventListener("change", applyFiltersAndRender);
+
+      document.getElementById("loadMore").addEventListener("click", fetchNextPage);
+
+      document.getElementById("chips").addEventListener("click", (e) => {
+        const chip = e.target.closest(".chip");
+        if (!chip) return;
+        chip.dataset.on = (chip.dataset.on === "1") ? "0" : "1";
+        applyFiltersAndRender();
       });
+
+      // Optional: show quick details in an alert when hash is set (simple “detail” without another page)
+      window.addEventListener("hashchange", () => {
+        const params = new URLSearchParams(location.hash.replace(/^#/, ""));
+        const uid = params.get("uid");
+        if (!uid) return;
+
+        const ev = all.find(x => String(x.uid) === String(uid));
+        if (!ev) return;
+
+        const lines = [
+          ev.title,
+          ev.dateLabel || "",
+          [ev.venue, ev.address].filter(Boolean).join(" — "),
+          ev.agenda ? `Source: ${ev.agenda}` : "",
+          ev.externalUrl ? `Lien: ${ev.externalUrl}` : ""
+        ].filter(Boolean);
+
+        alert(lines.join("\n"));
+      });
+    }
+
+    async function init() {
+      wireUI();
+      document.getElementById("status").textContent = "Chargement…";
+      await fetchNextPage(); // first page
+      await fetchNextPage(); // preload second page for nicer first impression (optional)
+    }
+
+    init();
   </script>
 </body>
 </html>
