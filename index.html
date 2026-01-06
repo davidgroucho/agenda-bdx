@@ -6,85 +6,228 @@
   <title>Agenda Culture — Bordeaux Métropole</title>
   <meta name="description" content="Concerts, expos, théâtre et plus — agrégé depuis l'open data de Bordeaux Métropole." />
 
-  <style>
-    :root { --bg:#0b0c10; --panel:#11131a; --card:#141826; --text:#e9ecf1; --muted:#a7b0c0; --line:rgba(255,255,255,.10); }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji"; background: radial-gradient(1200px 600px at 20% -10%, rgba(98, 0, 255, .35), transparent 60%),
-                                                   radial-gradient(1000px 600px at 90% 0%, rgba(0, 255, 180, .18), transparent 55%),
-                                                   var(--bg);
-           color: var(--text); }
-    a { color: inherit; }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px; }
-    header { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; justify-content:space-between; margin-bottom: 12px; }
-    .brand { display:flex; flex-direction:column; gap:6px; }
-    .brand h1 { margin:0; font-size: 18px; letter-spacing:.2px; }
-    .brand p { margin:0; color: var(--muted); font-size: 13px; }
+  <!--
+    LOGO:
+    Put your logo file in: assets/bordeaux-logo.svg
+    (or .png) and update the src below.
+  -->
 
-    .panel { background: rgba(17,19,26,.72); border: 1px solid var(--line); border-radius: 18px; padding: 12px; backdrop-filter: blur(10px); }
-    .controls { display:grid; grid-template-columns: 1.4fr 1fr; gap: 10px; align-items: start; }
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans";
+      background: #fff;
+      color: #111;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+    /* Header */
+    .topbar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 16px;
+    }
+    .brand { display:flex; gap: 12px; align-items: center; min-width: 0; }
+    .logo { height: 44px; width: auto; display:block; }
+    h1 { margin: 0; font-size: 18px; }
+    .brand p { margin: 3px 0 0; color: #555; font-size: 13px; }
+    .status { color:#555; font-size: 13px; white-space: nowrap; }
+
+    /* Panel / controls */
+    .panel {
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fafafa;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 10px;
+      align-items: start;
+    }
     @media (max-width: 860px) { .controls { grid-template-columns: 1fr; } }
 
     .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .field { display:flex; flex-direction:column; gap:6px; min-width: 220px; flex: 1; }
-    label { font-size: 12px; color: var(--muted); }
-    input[type="text"] { width: 100%; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: rgba(20,24,38,.7); color: var(--text); outline:none; }
-    input[type="text"]::placeholder { color: rgba(167,176,192,.75); }
+    label { font-size: 12px; color: #555; }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #111;
+      outline: none;
+    }
+    input[type="text"]::placeholder { color: #888; }
 
     .chips { display:flex; flex-wrap:wrap; gap:8px; }
-    .chip { user-select:none; cursor:pointer; border: 1px solid var(--line); background: rgba(20,24,38,.55);
-            padding: 8px 10px; border-radius: 999px; font-size: 12px; color: var(--text); }
-    .chip[data-on="1"] { background: rgba(98, 0, 255, .22); border-color: rgba(98, 0, 255, .55); }
+    .chip {
+      user-select:none; cursor:pointer;
+      border: 1px solid #ddd;
+      background: #fff;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #111;
+    }
+    .chip[data-on="1"] { background: #111; color: #fff; border-color: #111; }
 
     .toggles { display:flex; gap:10px; flex-wrap:wrap; }
-    .toggle { display:flex; align-items:center; gap:8px; padding: 8px 10px; border-radius: 14px;
-              border: 1px solid var(--line); background: rgba(20,24,38,.55); font-size: 12px; }
-    .toggle input { transform: translateY(1px); }
+    .toggle {
+      display:flex; align-items:center; gap:8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      font-size: 12px;
+    }
 
-    .meta { color: var(--muted); font-size: 13px; margin: 10px 0 14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .dot { opacity:.5; }
-
-    .grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+    /* Grid/cards */
+    .grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-top: 12px; }
     @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
     @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
 
-    .card { background: rgba(20,24,38,.78); border: 1px solid var(--line); border-radius: 18px; overflow:hidden; display:flex; flex-direction:column; min-height: 220px; }
-    .thumb { width:100%; aspect-ratio: 16/9; background: rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center; }
+    .card {
+      border: 1px solid #eee;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+    }
+    .thumb { width:100%; aspect-ratio: 16/9; background: #f2f2f2; display:flex; align-items:center; justify-content:center; }
     .thumb img { width:100%; height:100%; object-fit: cover; display:block; }
     .content { padding: 12px; display:flex; flex-direction:column; gap: 8px; flex: 1; }
-    .title { font-weight: 780; font-size: 15px; line-height: 1.25; }
-    .sub { font-size: 12px; color: var(--muted); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--text); }
-    .desc { font-size: 13px; color: rgba(233,236,241,.92); line-height:1.35; margin:0; }
+
+    .title { font-weight: 700; font-size: 15px; line-height: 1.25; }
+    .sub { font-size: 12px; color: #555; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e5e5; background: #fafafa; color: #111; }
+
+    .desc { font-size: 13px; color: #222; line-height:1.35; margin:0; }
+
     .actions { margin-top:auto; display:flex; justify-content:space-between; gap:10px; align-items:center; padding-top: 4px; }
-    .btn { display:inline-flex; align-items:center; gap:8px; padding: 8px 10px; border-radius: 12px;
-           border: 1px solid var(--line); background: rgba(255,255,255,.04); text-decoration:none; font-size: 12px; }
-    .btn:hover { background: rgba(255,255,255,.07); }
-    .mutedlink { color: rgba(167,176,192,.95); text-decoration:none; font-size: 12px; }
+    .btn {
+      display:inline-flex; align-items:center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #111;
+      background: #111;
+      color: #fff;
+      text-decoration:none;
+      font-size: 12px;
+    }
+    .btn:hover { opacity: .92; }
+    .mutedlink { color: #555; text-decoration:none; font-size: 12px; cursor: pointer; }
     .mutedlink:hover { text-decoration: underline; }
 
+    /* Footer */
     .footer { display:flex; justify-content:center; margin: 16px 0 30px; }
-    .load { cursor:pointer; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line);
-            background: rgba(98,0,255,.18); color: var(--text); font-weight: 650; }
-    .load:disabled { opacity: .55; cursor:not-allowed; }
+    .load {
+      cursor:pointer;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #111;
+      font-weight: 650;
+    }
+    .load:hover { background:#f6f6f6; }
+    .load:disabled { opacity: .6; cursor:not-allowed; }
 
-    .error { white-space: pre-wrap; color: #ffb4b4; background: rgba(255, 0, 0, .08); border: 1px solid rgba(255,0,0,.20); padding: 10px 12px; border-radius: 14px; margin-top: 10px; display:none; }
+    /* Error */
+    .error {
+      white-space: pre-wrap;
+      color: #b00020;
+      background: #fff5f5;
+      border: 1px solid #ffd6d6;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-top: 10px;
+      display:none;
+    }
+
+    /* Modal */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modal {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 14px;
+      max-width: 720px;
+      width: 100%;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.15);
+    }
+    .modalhead {
+      display:flex;
+      align-items:flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .modal h2 { margin: 0; font-size: 16px; line-height: 1.25; }
+    .close {
+      border: 1px solid #ddd;
+      background: #fff;
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: 650;
+    }
+    .close:hover { background: #f6f6f6; }
+    .modalbody { display:flex; flex-direction: column; gap: 10px; color: #222; }
+    .modalbody .meta { color: #555; font-size: 13px; }
+    .modalbody .long { font-size: 14px; line-height: 1.5; }
+    .modalbody .links { display:flex; gap: 10px; flex-wrap:wrap; }
+    .ghost {
+      display:inline-flex; align-items:center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #111;
+      text-decoration:none;
+      font-size: 12px;
+      cursor:pointer;
+    }
+    .ghost:hover { background:#f6f6f6; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <header>
+    <header class="topbar">
       <div class="brand">
-        <h1>Agenda Culture — Bordeaux Métropole</h1>
-        <p>Concerts, expos, théâtre… (open data) — “à ta sauce”.</p>
+        <img class="logo" src="assets/bordeaux-logo.svg" alt="Ville de Bordeaux" />
+        <div style="min-width:0;">
+          <h1>Agenda Culture — Bordeaux Métropole</h1>
+          <p>Concerts, expos, théâtre… (open data)</p>
+        </div>
       </div>
-      <div class="meta" id="status">Chargement…</div>
+      <div class="status" id="status">Chargement…</div>
     </header>
 
     <section class="panel controls">
       <div class="field">
         <label for="search">Recherche</label>
-        <input id="search" type="text" placeholder="ex: théâtre, Capc, jazz, Darwin…" />
+        <input id="search" type="text" placeholder="ex: théâtre, jazz, Darwin, CAPC…" />
       </div>
 
       <div class="field">
@@ -101,7 +244,7 @@
       </div>
 
       <div class="field" style="grid-column: 1 / -1;">
-        <label>Catégories (client-side)</label>
+        <label>Catégories</label>
         <div class="chips" id="chips">
           <span class="chip" data-key="concert" data-on="1">Concert</span>
           <span class="chip" data-key="expo" data-on="1">Expo</span>
@@ -115,10 +258,21 @@
 
     <div class="error" id="err"></div>
 
-    <section class="grid" id="list" style="margin-top:12px;"></section>
+    <section class="grid" id="list"></section>
 
     <div class="footer">
       <button class="load" id="loadMore">Afficher plus</button>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document">
+      <div class="modalhead">
+        <h2 id="modalTitle">Détails</h2>
+        <button class="close" id="closeModal" aria-label="Fermer">Fermer</button>
+      </div>
+      <div class="modalbody" id="modalBody"></div>
     </div>
   </div>
 
@@ -177,11 +331,9 @@
     }
 
     function firstUrlFromAny(value) {
-      // value can be null, string, array, object…
       if (!value) return "";
       if (typeof value === "string") return value;
 
-      // Array of strings/objects
       if (Array.isArray(value)) {
         for (const v of value) {
           const u = firstUrlFromAny(v);
@@ -190,7 +342,6 @@
         return "";
       }
 
-      // Object: try common keys, else scan
       if (typeof value === "object") {
         const candidates = ["url","href","link","website","value"];
         for (const k of candidates) {
@@ -221,7 +372,6 @@
       const image = f.location_image ?? "";
       const imageCredits = f.location_imagecredits ?? "";
 
-      // Links are often null; try multiple sources
       const externalUrl =
         firstUrlFromAny(f.links) ||
         (typeof f.onlineaccesslink === "string" ? f.onlineaccesslink : "") ||
@@ -229,7 +379,6 @@
         firstUrlFromAny(f.location_links) ||
         "";
 
-      // Price/free info: best-effort from conditions_fr (often null)
       const conditions = (f.conditions_fr ?? "").toString();
       const isFree = /\bgratuit\b/i.test(conditions) || /\bfree\b/i.test(conditions);
       const isPaid = /\b(\d+ ?€|euros?)\b/i.test(conditions) || /\bpayant\b/i.test(conditions);
@@ -254,7 +403,7 @@
       };
     }
 
-    // Client-side category matching (you can tweak these keywords freely)
+    // Client-side category matching (tweak freely)
     const CATEGORY_RULES = {
       concert:  /\b(concert|live|dj|musique|jazz|rock|hip[- ]?hop|electro|orchestre)\b/i,
       expo:     /\b(expo|exposition|vernissage|musée|museum|galerie|photograph|peinture|sculpture)\b/i,
@@ -264,7 +413,9 @@
     };
 
     function activeCategories() {
-      const on = [...document.querySelectorAll(".chip")].filter(c => c.dataset.on === "1").map(c => c.dataset.key);
+      const on = [...document.querySelectorAll(".chip")]
+        .filter(c => c.dataset.on === "1")
+        .map(c => c.dataset.key);
       return new Set(on);
     }
 
@@ -281,7 +432,6 @@
         if (re && re.test(hay)) matched = true;
       }
 
-      // "Autre" means: allow things that don't match the main categories
       if (act.has("autre")) {
         const anyMain = ["concert","expo","theatre","festival","cinema"].some(k => CATEGORY_RULES[k].test(hay));
         if (!anyMain) matched = true;
@@ -306,10 +456,9 @@
       const onlyFree = document.getElementById("onlyFree").checked;
       const onlyPaid = document.getElementById("onlyPaid").checked;
 
-      // If both unchecked: no filter
       if (!onlyFree && !onlyPaid) return true;
 
-      // If we don't know price info, don't hide it aggressively:
+      // If we don't know price info, don't hide it aggressively
       if (!ev.conditions) return true;
 
       if (onlyFree && onlyPaid) return true;
@@ -321,10 +470,12 @@
     function render(ev) {
       const where = [ev.venue, ev.district || ev.city].filter(Boolean).join(" · ");
       const addr = ev.address ? `<span class="badge">${escapeHtml(ev.address)}</span>` : "";
-      const price = ev.conditions ? `<span class="badge">${escapeHtml(ev.conditions.slice(0, 40))}${ev.conditions.length>40?"…":""}</span>` : `<span class="badge">Tarif : à vérifier</span>`;
+      const price = ev.conditions
+        ? `<span class="badge">${escapeHtml(ev.conditions.slice(0, 40))}${ev.conditions.length>40?"…":""}</span>`
+        : `<span class="badge">Tarif : à vérifier</span>`;
+
       const img = ev.image ? `<img src="${escapeHtml(ev.image)}" alt="${escapeHtml(ev.title)}">` : "";
 
-      // internal permalink (shareable)
       const internal = `#uid=${encodeURIComponent(ev.uid)}&slug=${encodeURIComponent(ev.slug || "")}`;
 
       return `
@@ -342,8 +493,10 @@
               ${addr}
             </div>
             <div class="actions">
-              <a class="mutedlink" href="${internal}">Détails</a>
-              ${ev.externalUrl ? `<a class="btn" href="${escapeHtml(ev.externalUrl)}" target="_blank" rel="noreferrer">Lien officiel</a>` : `<span class="sub">Pas de lien</span>`}
+              <a class="mutedlink" href="${internal}" data-details="1">Détails</a>
+              ${ev.externalUrl
+                ? `<a class="btn" href="${escapeHtml(ev.externalUrl)}" target="_blank" rel="noreferrer">Lien officiel</a>`
+                : `<span class="sub">Pas de lien</span>`}
             </div>
           </div>
         </article>
@@ -360,7 +513,7 @@
         .filter(ev => matchesPlace(ev, place))
         .filter(ev => matchesPrice(ev));
 
-      document.getElementById("status").textContent = `${filtered.length} événements affichés · ${all.length} chargés`;
+      document.getElementById("status").textContent = `${filtered.length} affichés · ${all.length} chargés`;
       document.getElementById("list").innerHTML = filtered.map(render).join("");
     }
 
@@ -390,7 +543,6 @@
         const rows = data.results || data.records || [];
         const events = rows.map(normalize);
 
-        // Append, de-dupe by uid
         const seen = new Set(all.map(e => e.uid));
         for (const ev of events) {
           if (!ev.uid || seen.has(ev.uid)) continue;
@@ -409,8 +561,73 @@
       }
     }
 
+    // Modal
+    function openModal(ev) {
+      const overlay = document.getElementById("overlay");
+      const title = document.getElementById("modalTitle");
+      const body = document.getElementById("modalBody");
+
+      title.textContent = ev.title;
+
+      const whenWhere = [
+        ev.dateLabel || "",
+        [ev.venue, ev.address].filter(Boolean).join(" — "),
+        ev.agenda ? `Source : ${ev.agenda}` : ""
+      ].filter(Boolean).join("\n");
+
+      const credits = ev.imageCredits ? `<div class="meta">Crédits image : ${escapeHtml(ev.imageCredits)}</div>` : "";
+
+      const long = ev.longdesc
+        ? `<div class="long">${ev.longdesc}</div>`
+        : (ev.desc ? `<div class="long">${escapeHtml(ev.desc)}</div>` : `<div class="long">Aucune description.</div>`);
+
+      const price = ev.conditions ? `<span class="badge">${escapeHtml(ev.conditions)}</span>` : `<span class="badge">Tarif : à vérifier</span>`;
+
+      const links = `
+        <div class="links">
+          ${ev.externalUrl ? `<a class="btn" href="${escapeHtml(ev.externalUrl)}" target="_blank" rel="noreferrer">Lien officiel</a>` : ""}
+          <button class="ghost" id="copyLink">Copier le lien</button>
+        </div>
+      `;
+
+      const img = ev.image ? `<div class="thumb" style="border:1px solid #eee; border-radius:12px; overflow:hidden;">${`<img src="${escapeHtml(ev.image)}" alt="${escapeHtml(ev.title)}">`}</div>` : "";
+
+      body.innerHTML = `
+        ${img}
+        <div class="meta" style="white-space:pre-wrap;">${escapeHtml(whenWhere)}</div>
+        <div class="sub" style="margin-top:-4px;">${price}</div>
+        ${long}
+        ${credits}
+        ${links}
+      `;
+
+      overlay.style.display = "flex";
+      overlay.setAttribute("aria-hidden", "false");
+
+      // Copy share link (hash-based)
+      const share = `${location.origin}${location.pathname}#uid=${encodeURIComponent(ev.uid)}&slug=${encodeURIComponent(ev.slug || "")}`;
+      const copyBtn = document.getElementById("copyLink");
+      if (copyBtn) {
+        copyBtn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(share);
+            copyBtn.textContent = "Copié ✓";
+            setTimeout(() => copyBtn.textContent = "Copier le lien", 1200);
+          } catch {
+            // fallback
+            prompt("Copie ce lien :", share);
+          }
+        };
+      }
+    }
+
+    function closeModal() {
+      const overlay = document.getElementById("overlay");
+      overlay.style.display = "none";
+      overlay.setAttribute("aria-hidden", "true");
+    }
+
     function wireUI() {
-      // Debounce for inputs
       let t = null;
       const rerenderDebounced = () => {
         clearTimeout(t);
@@ -431,24 +648,34 @@
         applyFiltersAndRender();
       });
 
-      // Optional: show quick details in an alert when hash is set (simple “detail” without another page)
+      // Modal events
+      document.getElementById("list").addEventListener("click", (e) => {
+        const a = e.target.closest('a[data-details="1"]');
+        if (!a) return;
+        const card = e.target.closest(".card");
+        const uid = card?.dataset?.uid;
+        if (!uid) return;
+
+        // Prevent navigation flicker; we'll still sync hash
+        e.preventDefault();
+        location.hash = `uid=${encodeURIComponent(uid)}`;
+
+        const ev = all.find(x => String(x.uid) === String(uid));
+        if (ev) openModal(ev);
+      });
+
+      document.getElementById("closeModal").addEventListener("click", closeModal);
+      document.getElementById("overlay").addEventListener("click", (e) => {
+        if (e.target.id === "overlay") closeModal();
+      });
+
+      // Open modal if URL already has #uid=...
       window.addEventListener("hashchange", () => {
         const params = new URLSearchParams(location.hash.replace(/^#/, ""));
         const uid = params.get("uid");
         if (!uid) return;
-
         const ev = all.find(x => String(x.uid) === String(uid));
-        if (!ev) return;
-
-        const lines = [
-          ev.title,
-          ev.dateLabel || "",
-          [ev.venue, ev.address].filter(Boolean).join(" — "),
-          ev.agenda ? `Source: ${ev.agenda}` : "",
-          ev.externalUrl ? `Lien: ${ev.externalUrl}` : ""
-        ].filter(Boolean);
-
-        alert(lines.join("\n"));
+        if (ev) openModal(ev);
       });
     }
 
@@ -456,7 +683,14 @@
       wireUI();
       document.getElementById("status").textContent = "Chargement…";
       await fetchNextPage(); // first page
-      await fetchNextPage(); // preload second page for nicer first impression (optional)
+      await fetchNextPage(); // preload second page (optional)
+      // If page opened with a hash uid, try to open after we have data
+      const params = new URLSearchParams(location.hash.replace(/^#/, ""));
+      const uid = params.get("uid");
+      if (uid) {
+        const ev = all.find(x => String(x.uid) === String(uid));
+        if (ev) openModal(ev);
+      }
     }
 
     init();
