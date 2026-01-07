@@ -27,7 +27,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --- Config ---
-const TARGET_UID = (process.env.TARGET_UID || "").trim();
+//const TARGET_UID = (process.env.TARGET_UID || "").trim();
 const BORDEAUX_API_BASE =
   "https://datahub.bordeaux-metropole.fr/api/explore/v2.1/catalog/datasets/met_agenda/records";
 
