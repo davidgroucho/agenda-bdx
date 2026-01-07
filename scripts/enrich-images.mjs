@@ -19,6 +19,10 @@
  *   OPENVERSE_PAGE_SIZE=20
  */
 
+env:
+  MAX_EVENTS: "5000"
+  CONCURRENCY: "2"
+
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
