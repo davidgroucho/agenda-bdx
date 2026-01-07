@@ -110,31 +110,10 @@ async function fetchAgendaPage(offset, limit) {
   const url = new URL(BORDEAUX_API_BASE);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));
-<<<<<<< HEAD
-  // Keep select minimal for speed (add more fields if needed)
-  url.searchParams.set(
-    "select",
-    [
-      "uid",
-      "slug",
-      "title_fr",
-      "description_fr",
-      "location_name",
-      "location_city",
-      "date_start",
-      "date_end",
-      "location_image",
-      "first_publication_date",
-      "last_modified_date",
-      "external_link",
-      "link",
-    ].join(",")
-  );
-=======
+
   // NOTE: we intentionally do NOT use the `select` parameter here.
   // The met_agenda schema can evolve and unknown fields would break the job (HTTP 400).
   // Fetching full records is slower but much more robust.
->>>>>>> ed15b29 (fix: make enrichment robust to met_agenda schema changes)
 
   // NOTE: filtering via `where` is possible but field shapes vary.
   // We fetch pages and filter client-side to avoid missing records.
