@@ -421,7 +421,14 @@
     }
 
     function normalize(row) {
-      const f = row?.record?.fields ?? row?.fields ?? row ?? {};
+      // Supports both Opendatasoft formats:
+      // - v2.1: fields are flat in `row`
+      // - older: fields live in `row.record.fields`
+      const f = row?.record?.fields ?? row ?? {};
+
+      const uid  = String(f.uid ?? row?.uid ?? "");
+      const slug = String(f.slug ?? row?.slug ?? "");
+      
       const title = f.title_fr ?? "(sans titre)";
       const desc = f.description_fr ?? "";
       const longdesc = f.longdescription_fr ?? "";
@@ -449,8 +456,8 @@
       const isPaid = /\b(\d+ ?€|euros?)\b/i.test(conditions) || /\bpayant\b/i.test(conditions);
 
       return {
-        uid: f.uid,
-        slug: f.slug,
+        uid,
+        slug,
         title,
         desc,
         longdesc,
