@@ -120,7 +120,6 @@ async function fetchAgendaPage(offset, limit) {
       "description_fr",
       "location_name",
       "location_city",
-      "location_zipcode",
       "date_start",
       "date_end",
       "location_image",
