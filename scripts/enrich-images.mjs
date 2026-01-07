@@ -110,6 +110,7 @@ async function fetchAgendaPage(offset, limit) {
   const url = new URL(BORDEAUX_API_BASE);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));
+<<<<<<< HEAD
   // Keep select minimal for speed (add more fields if needed)
   url.searchParams.set(
     "select",
@@ -129,19 +130,43 @@ async function fetchAgendaPage(offset, limit) {
       "link",
     ].join(",")
   );
+=======
+  // NOTE: we intentionally do NOT use the `select` parameter here.
+  // The met_agenda schema can evolve and unknown fields would break the job (HTTP 400).
+  // Fetching full records is slower but much more robust.
+>>>>>>> ed15b29 (fix: make enrichment robust to met_agenda schema changes)
 
   // NOTE: filtering via `where` is possible but field shapes vary.
   // We fetch pages and filter client-side to avoid missing records.
-  const res = await fetch(url.toString(), {
+const res = await fetch(url.toString(), {
+  headers: {
+    "User-Agent": "agenda-bdx-image-enricher/1.0 (GitHub Actions)",
+    Accept: "application/json",
+  },
+});
+
+if (res.ok) return res.json();
+
+const body = await res.text();
+
+// If the dataset schema changed (unknown field in SELECT), retry without SELECT.
+if (res.status === 400 && body.includes("Unknown field")) {
+  const url2 = new URL(url.toString());
+  url2.searchParams.delete("select");
+
+  const res2 = await fetch(url2.toString(), {
     headers: {
       "User-Agent": "agenda-bdx-image-enricher/1.0 (GitHub Actions)",
       Accept: "application/json",
     },
   });
-  if (!res.ok) {
-    throw new Error(`Bordeaux API error ${res.status}: ${await res.text()}`);
-  }
-  return res.json();
+
+  if (res2.ok) return res2.json();
+  throw new Error(`Bordeaux API error ${res2.status} after retry: ${await res2.text()}`);
+}
+
+throw new Error(`Bordeaux API error ${res.status}: ${body}`);
+
 }
 
 async function fetchEventsMissingImages(maxEvents) {
@@ -344,9 +369,9 @@ function createLimiter(max) {
 
 // --- Main enrichment logic ---
 function buildSearchQuery(row) {
-  const title = row?.title_fr || "";
-  const place = row?.location_name || "";
-  const city = row?.location_city || "Bordeaux";
+  const title = row?.title_fr || row?.title || row?.title_en || "";
+  const place = row?.location_name || row?.location || row?.location_title || "";
+  const city = row?.location_city || row?.city || "Bordeaux";
   // Add city to disambiguate
   return [title, place, city].filter(Boolean).join(" ");
 }
