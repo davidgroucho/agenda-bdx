@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agenda Culture — Bordeaux Métropole</title>
+  <meta name="description" content="Concerts, expos, théâtre et plus — agrégé depuis l'open data de Bordeaux Métropole." />
+
+  <!--
+    IMAGE ENRICHMENT (batch):
+    If many events have no photo, you can generate a mapping file in batch, e.g.
+      assets/event-images.json
+    keyed by uid (or slug), and this page will use it as a fallback when location_image is missing.
+
+    Example shape:
+    {
+      "23416155": {
+        "url": "https://.../image.jpg",
+        "provider": "Wikimedia",
+        "page_url": "https://...",
+        "author": "...",
+        "license": "CC BY-SA 4.0",
+        "credit": "Author / License",
+        "source_url": "https://..."
+      }
+    }
+
+    LOGO:
+    Put your logo file in: assets/bordeaux-logo.svg
+    (or .png) and update the src below.
+  -->
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans";
+      background: #fff;
+      color: #111;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+    /* Header */
+    .topbar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 16px;
+    }
+    .brand { display:flex; gap: 12px; align-items: center; min-width: 0; }
+    .logo { height: 44px; width: auto; display:block; }
+    h1 { margin: 0; font-size: 18px; }
+    .brand p { margin: 3px 0 0; color: #555; font-size: 13px; }
+    .status { color:#555; font-size: 13px; white-space: nowrap; }
+
+    /* Panel / controls */
+    .panel {
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fafafa;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+    @media (max-width: 860px) { .controls { grid-template-columns: 1fr; } }
+
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .field { display:flex; flex-direction:column; gap:6px; min-width: 220px; flex: 1; }
+    label { font-size: 12px; color: #555; }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #111;
+      outline: none;
+    }
+    input[type="text"]::placeholder { color: #888; }
+
+    .chips { display:flex; flex-wrap:wrap; gap:8px; }
+    .chip {
+      user-select:none; cursor:pointer;
+      border: 1px solid #ddd;
+      background: #fff;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #111;
+    }
+    .chip[data-on="1"] { background: #111; color: #fff; border-color: #111; }
+
+    .toggles { display:flex; gap:10px; flex-wrap:wrap; }
+    .toggle {
+      display:flex; align-items:center; gap:8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      font-size: 12px;
+    }
+
+    /* Grid/cards */
+    .grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-top: 12px; }
+    @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      border: 1px solid #eee;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+    }
+    .thumb { width:100%; aspect-ratio: 16/9; background: #f2f2f2; display:flex; align-items:center; justify-content:center; }
+    .thumb img { width:100%; height:100%; object-fit: cover; display:block; }
+    .content { padding: 12px; display:flex; flex-direction:column; gap: 8px; flex: 1; }
+
+    .title { font-weight: 700; font-size: 15px; line-height: 1.25; }
+    .sub { font-size: 12px; color: #555; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e5e5; background: #fafafa; color: #111; }
+
+    .desc { font-size: 13px; color: #222; line-height:1.35; margin:0; }
+
+    .actions { margin-top:auto; display:flex; justify-content:space-between; gap:10px; align-items:center; padding-top: 4px; }
+    .btn {
+      display:inline-flex; align-items:center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #111;
+      background: #111;
+      color: #fff;
+      text-decoration:none;
+      font-size: 12px;
+    }
+    .btn:hover { opacity: .92; }
+    .mutedlink { color: #555; text-decoration:none; font-size: 12px; cursor: pointer; }
+    .mutedlink:hover { text-decoration: underline; }
+
+    /* Footer */
+    .footer { display:flex; justify-content:center; margin: 16px 0 30px; }
+    .load {
+      cursor:pointer;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #111;
+      font-weight: 650;
+    }
+    .load:hover { background:#f6f6f6; }
+    .load:disabled { opacity: .6; cursor:not-allowed; }
+
+    /* Error */
+    .error {
+      white-space: pre-wrap;
+      color: #b00020;
+      background: #fff5f5;
+      border: 1px solid #ffd6d6;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-top: 10px;
+      display:none;
+    }
+
+    /* Modal */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modal {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 14px;
+      max-width: 720px;
+      width: 100%;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.15);
+    }
+    .modalhead {
+      display:flex;
+      align-items:flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .modal h2 { margin: 0; font-size: 16px; line-height: 1.25; }
+    .close {
+      border: 1px solid #ddd;
+      background: #fff;
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: 650;
+    }
+    .close:hover { background: #f6f6f6; }
+    .modalbody { display:flex; flex-direction: column; gap: 10px; color: #222; }
+    .modalbody .meta { color: #555; font-size: 13px; }
+    .modalbody .long { font-size: 14px; line-height: 1.5; }
+    .modalbody .links { display:flex; gap: 10px; flex-wrap:wrap; }
+    .ghost {
+      display:inline-flex; align-items:center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #111;
+      text-decoration:none;
+      font-size: 12px;
+      cursor:pointer;
+    }
+    .ghost:hover { background:#f6f6f6; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <img class="logo" src="assets/bordeaux-logo.svg" alt="Ville de Bordeaux" />
+        <div style="min-width:0;">
+          <h1>Agenda Culture — Bordeaux Métropole</h1>
+          <p>Concerts, expos, théâtre… (open data)</p>
+        </div>
+      </div>
+      <div class="status" id="status">Chargement…</div>
+    </header>
+
+    <section class="panel controls">
+      <div class="field">
+        <label for="search">Recherche</label>
+        <input id="search" type="text" placeholder="ex: théâtre, jazz, Darwin, CAPC…" />
+      </div>
+
+      <div class="field">
+        <label>Filtres</label>
+        <div class="row">
+          <div class="toggles">
+            <label class="toggle"><input type="checkbox" id="onlyFree" /> Gratuit</label>
+            <label class="toggle"><input type="checkbox" id="onlyPaid" /> Payant</label>
+          </div>
+          <div class="field" style="min-width:220px; flex:1;">
+            <input id="place" type="text" placeholder="commune/quartier (ex: Pessac, Chartrons…)" />
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>Catégories</label>
+        <div class="chips" id="chips">
+          <span class="chip" data-key="concert" data-on="1">Concert</span>
+          <span class="chip" data-key="expo" data-on="1">Expo</span>
+          <span class="chip" data-key="theatre" data-on="1">Théâtre</span>
+          <span class="chip" data-key="festival" data-on="1">Festival</span>
+          <span class="chip" data-key="cinema" data-on="0">Cinéma</span>
+          <span class="chip" data-key="autre" data-on="0">Autre</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="error" id="err"></div>
+
+    <section class="grid" id="list"></section>
+
+    <div class="footer">
+      <button class="load" id="loadMore">Afficher plus</button>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document">
+      <div class="modalhead">
+        <h2 id="modalTitle">Détails</h2>
+        <button class="close" id="closeModal" aria-label="Fermer">Fermer</button>
+      </div>
+      <div class="modalbody" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    // DataHub Bordeaux Métropole (Opendatasoft Explore API v2.1)
+    const BASE = "https://datahub.bordeaux-metropole.fr/api/explore/v2.1/catalog/datasets/met_agenda/records";
+
+    // Optional: local batch-enriched image mapping (commit this file from a daily/weekly job)
+    // If not present, the site still works.
+    const IMAGE_ENRICHMENT_URL = "assets/event-images.json";
+    let IMAGE_MAP = null;
+
+    async function loadImageMap() {
+      if (IMAGE_MAP) return IMAGE_MAP;
+      try {
+        const res = await fetch(IMAGE_ENRICHMENT_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("no map");
+        const data = await res.json();
+        // Accept either {uid: {...}} or {items:[{uid,...}]}
+        if (Array.isArray(data?.items)) {
+          IMAGE_MAP = Object.fromEntries(data.items.filter(x => x?.uid).map(x => [String(x.uid), x]));
+        } else {
+          IMAGE_MAP = data && typeof data === "object" ? data : {};
+        }
+      } catch {
+        IMAGE_MAP = {};
+      }
+      return IMAGE_MAP;
+    }
+
+    function applyImageEnrichment(ev) {
+      if (!IMAGE_MAP) return ev;
+      const key1 = String(ev.uid ?? "");
+      const key2 = String(ev.slug ?? "");
+      const m = (key1 && IMAGE_MAP[key1]) || (key2 && IMAGE_MAP[key2]) || null;
+      if (!m || typeof m !== "object") return ev;
+
+      // Only overwrite when missing, to respect upstream images
+      if (!ev.image && typeof m.url === "string") ev.image = m.url;
+
+      // Extra metadata (used in the modal for attribution)
+      if (!ev.imageCredits && typeof m.credit === "string") ev.imageCredits = m.credit;
+
+      ev.imageSourceUrl = ev.imageSourceUrl || (typeof m.page_url === "string" ? m.page_url : "");
+      ev.imageProvider  = ev.imageProvider  || (typeof m.provider === "string" ? m.provider : "");
+      ev.imageAuthor    = ev.imageAuthor    || (typeof m.author === "string" ? m.author : "");
+      ev.imageLicense   = ev.imageLicense   || (typeof m.license === "string" ? m.license : "");
+
+      // Sometimes a better "official" page exists; keep existing if already set.
+      if (!ev.externalUrl && typeof m.source_url === "string") ev.externalUrl = m.source_url;
+
+      return ev;
+    }
+
+    // Fields confirmed from your console:
+    const DATE_FIELD = "firstdate_begin";
+    const END_FIELD = "firstdate_end";
+
+    // Reduce payload (keep only what we need)
+    const SELECT_FIELDS = [
+      "uid","slug","title_fr","description_fr","longdescription_fr",
+      "daterange_fr", DATE_FIELD, END_FIELD,
+      "keywords_fr","originagenda_title","updatedat",
+      "conditions_fr","links","onlineaccesslink",
+      "location_name","location_address","location_postalcode","location_city","location_district",
+      "location_coordinates","location_image","location_imagecredits","location_website","location_links"
+    ].join(",");
+
+    // Default upstream search query (broad on purpose; we add stricter client-side filtering too)
+    const CULTURE_Q = '(concert OR expo OR exposition OR théâtre OR theatre OR spectacle OR scène OR "musique" OR "festival" OR "performance" OR "danse")';
+
+    // Pagination
+    const PAGE_SIZE = 24;
+    let offset = 0;
+    let all = []; // accumulated events
+
+    function addMonths(d, n) {
+      const x = new Date(d);
+      x.setMonth(x.getMonth() + n);
+      return x;
+    }
+    function isoDate(d) { return d.toISOString().slice(0,10); }
+
+    function buildApiUrl({ q = CULTURE_Q, limit = PAGE_SIZE, offset = 0 } = {}) {
+      const now = new Date();
+      const end = addMonths(now, 6);
+      const where = `${DATE_FIELD} >= date'${isoDate(now)}' AND ${DATE_FIELD} < date'${isoDate(end)}'`;
+
+      const u = new URL(BASE);
+      u.searchParams.set("select", SELECT_FIELDS);
+      u.searchParams.set("q", q);
+      u.searchParams.set("where", where);
+      u.searchParams.set("order_by", `${DATE_FIELD} asc`);
+      u.searchParams.set("limit", String(limit));
+      u.searchParams.set("offset", String(offset));
+      return u.toString();
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+
+    function firstUrlFromAny(value) {
+      if (!value) return "";
+      if (typeof value === "string") return value;
+
+      if (Array.isArray(value)) {
+        for (const v of value) {
+          const u = firstUrlFromAny(v);
+          if (u) return u;
+        }
+        return "";
+      }
+
+      if (typeof value === "object") {
+        const candidates = ["url","href","link","website","value"];
+        for (const k of candidates) {
+          if (value[k] && typeof value[k] === "string") return value[k];
+        }
+        for (const k of Object.keys(value)) {
+          const u = firstUrlFromAny(value[k]);
+          if (u) return u;
+        }
+      }
+      return "";
+    }
+
+    function normalize(row) {
+      const f = row?.record?.fields ?? row?.fields ?? row ?? {};
+      const title = f.title_fr ?? "(sans titre)";
+      const desc = f.description_fr ?? "";
+      const longdesc = f.longdescription_fr ?? "";
+      const keywords = f.keywords_fr ?? "";
+      const dateLabel = f.daterange_fr ?? "";
+
+      const venue = f.location_name ?? "";
+      const addressParts = [f.location_address, f.location_postalcode, f.location_city].filter(Boolean);
+      const address = addressParts.join(", ");
+      const district = f.location_district ?? "";
+      const city = f.location_city ?? "";
+
+      const image = f.location_image ?? "";
+      const imageCredits = f.location_imagecredits ?? "";
+
+      const externalUrl =
+        firstUrlFromAny(f.links) ||
+        (typeof f.onlineaccesslink === "string" ? f.onlineaccesslink : "") ||
+        (typeof f.location_website === "string" ? f.location_website : "") ||
+        firstUrlFromAny(f.location_links) ||
+        "";
+
+      const conditions = (f.conditions_fr ?? "").toString();
+      const isFree = /\bgratuit\b/i.test(conditions) || /\bfree\b/i.test(conditions);
+      const isPaid = /\b(\d+ ?€|euros?)\b/i.test(conditions) || /\bpayant\b/i.test(conditions);
+
+      return {
+        uid: f.uid,
+        slug: f.slug,
+        title,
+        desc,
+        longdesc,
+        keywords,
+        dateLabel,
+        start: f[DATE_FIELD] ?? null,
+        end: f[END_FIELD] ?? null,
+        agenda: f.originagenda_title ?? "",
+        venue, address, district, city,
+        image, imageCredits,
+        externalUrl,
+        conditions,
+        isFree,
+        isPaid
+      };
+    }
+
+    // Client-side category matching (tweak freely)
+    const CATEGORY_RULES = {
+      concert:  /\b(concert|live|dj|musique|jazz|rock|hip[- ]?hop|electro|orchestre)\b/i,
+      expo:     /\b(expo|exposition|vernissage|musée|museum|galerie|photograph|peinture|sculpture)\b/i,
+      theatre:  /\b(théâtre|theatre|spectacle|scène|scene|comédie|comedie|impro|pièce|piece)\b/i,
+      festival: /\b(festival)\b/i,
+      cinema:   /\b(cinéma|cinema|film|projection)\b/i
+    };
+
+    function activeCategories() {
+      const on = [...document.querySelectorAll(".chip")]
+        .filter(c => c.dataset.on === "1")
+        .map(c => c.dataset.key);
+      return new Set(on);
+    }
+
+    function matchesActiveCategories(ev) {
+      const act = activeCategories();
+      if (act.size === 0) return true;
+
+      const hay = `${ev.title}\n${ev.desc}\n${ev.keywords}`.toLowerCase();
+      let matched = false;
+
+      for (const key of act) {
+        if (key === "autre") continue;
+        const re = CATEGORY_RULES[key];
+        if (re && re.test(hay)) matched = true;
+      }
+
+      if (act.has("autre")) {
+        const anyMain = ["concert","expo","theatre","festival","cinema"].some(k => CATEGORY_RULES[k].test(hay));
+        if (!anyMain) matched = true;
+      }
+
+      return matched;
+    }
+
+    function matchesText(ev, q) {
+      if (!q) return true;
+      const hay = `${ev.title}\n${ev.desc}\n${ev.venue}\n${ev.city}\n${ev.district}\n${ev.keywords}`.toLowerCase();
+      return hay.includes(q.toLowerCase());
+    }
+
+    function matchesPlace(ev, q) {
+      if (!q) return true;
+      const hay = `${ev.city}\n${ev.district}\n${ev.venue}\n${ev.address}`.toLowerCase();
+      return hay.includes(q.toLowerCase());
+    }
+
+    function matchesPrice(ev) {
+      const onlyFree = document.getElementById("onlyFree").checked;
+      const onlyPaid = document.getElementById("onlyPaid").checked;
+
+      if (!onlyFree && !onlyPaid) return true;
+
+      // If we don't know price info, don't hide it aggressively
+      if (!ev.conditions) return true;
+
+      if (onlyFree && onlyPaid) return true;
+      if (onlyFree) return ev.isFree;
+      if (onlyPaid) return ev.isPaid || (!ev.isFree && ev.conditions);
+      return true;
+    }
+
+    function render(ev) {
+      const where = [ev.venue, ev.district || ev.city].filter(Boolean).join(" · ");
+      const addr = ev.address ? `<span class="badge">${escapeHtml(ev.address)}</span>` : "";
+      const price = ev.conditions
+        ? `<span class="badge">${escapeHtml(ev.conditions.slice(0, 40))}${ev.conditions.length>40?"…":""}</span>`
+        : `<span class="badge">Tarif : à vérifier</span>`;
+
+      const img = ev.image ? `<img loading="lazy" decoding="async" src="${escapeHtml(ev.image)}" alt="${escapeHtml(ev.title)}">` : "";
+
+      const internal = `#uid=${encodeURIComponent(ev.uid)}&slug=${encodeURIComponent(ev.slug || "")}`;
+
+      return `
+        <article class="card" data-uid="${escapeHtml(ev.uid)}">
+          <div class="thumb">${img || `<span class="sub">Aucune image</span>`}</div>
+          <div class="content">
+            <div class="title">${escapeHtml(ev.title)}</div>
+            <div class="sub">
+              <span class="badge">${escapeHtml(ev.dateLabel || "Date à confirmer")}</span>
+              ${where ? `<span class="badge">${escapeHtml(where)}</span>` : ""}
+            </div>
+            ${ev.desc ? `<p class="desc">${escapeHtml(ev.desc).slice(0, 220)}${ev.desc.length>220?"…":""}</p>` : ""}
+            <div class="sub" style="gap:6px;">
+              ${price}
+              ${addr}
+            </div>
+            <div class="actions">
+              <a class="mutedlink" href="${internal}" data-details="1">Détails</a>
+              ${ev.externalUrl
+                ? `<a class="btn" href="${escapeHtml(ev.externalUrl)}" target="_blank" rel="noreferrer">Lien officiel</a>`
+                : `<span class="sub">Pas de lien</span>`}
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function applyFiltersAndRender() {
+      const q = document.getElementById("search").value.trim();
+      const place = document.getElementById("place").value.trim();
+
+      const filtered = all
+        .filter(ev => matchesActiveCategories(ev))
+        .filter(ev => matchesText(ev, q))
+        .filter(ev => matchesPlace(ev, place))
+        .filter(ev => matchesPrice(ev));
+
+      document.getElementById("status").textContent = `${filtered.length} affichés · ${all.length} chargés`;
+      document.getElementById("list").innerHTML = filtered.map(render).join("");
+    }
+
+    function showError(msg) {
+      const el = document.getElementById("err");
+      el.style.display = "block";
+      el.textContent = msg;
+    }
+    function clearError() {
+      const el = document.getElementById("err");
+      el.style.display = "none";
+      el.textContent = "";
+    }
+
+    async function fetchNextPage() {
+      clearError();
+      const btn = document.getElementById("loadMore");
+      btn.disabled = true;
+      btn.textContent = "Chargement…";
+
+      try {
+        const url = buildApiUrl({ offset, limit: PAGE_SIZE });
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
+
+        const data = await res.json();
+        const rows = data.results || data.records || [];
+        const events = rows.map(normalize).map(applyImageEnrichment);
+
+        const seen = new Set(all.map(e => e.uid));
+        for (const ev of events) {
+          if (!ev.uid || seen.has(ev.uid)) continue;
+          seen.add(ev.uid);
+          all.push(ev);
+        }
+
+        offset += PAGE_SIZE;
+        applyFiltersAndRender();
+
+      } catch (e) {
+        showError(String(e?.stack || e?.message || e));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Afficher plus";
+      }
+    }
+
+    // Modal
+    function openModal(ev) {
+      const overlay = document.getElementById("overlay");
+      const title = document.getElementById("modalTitle");
+      const body = document.getElementById("modalBody");
+
+      title.textContent = ev.title;
+
+      const whenWhere = [
+        ev.dateLabel || "",
+        [ev.venue, ev.address].filter(Boolean).join(" — "),
+        ev.agenda ? `Source : ${ev.agenda}` : ""
+      ].filter(Boolean).join("\n");
+
+      const creditsParts = [];
+      if (ev.imageCredits) creditsParts.push(`Crédits : ${escapeHtml(ev.imageCredits)}`);
+      if (ev.imageAuthor) creditsParts.push(`Auteur : ${escapeHtml(ev.imageAuthor)}`);
+      if (ev.imageLicense) creditsParts.push(`Licence : ${escapeHtml(ev.imageLicense)}`);
+      if (ev.imageProvider) creditsParts.push(`Source : ${escapeHtml(ev.imageProvider)}`);
+      const credits = creditsParts.length ? `<div class="meta">${creditsParts.join(" · ")}</div>` : "";
+      const imageLink = ev.imageSourceUrl
+        ? `<div class="meta">Page image : <a class="mutedlink" href="${escapeHtml(ev.imageSourceUrl)}" target="_blank" rel="noreferrer">ouvrir</a></div>`
+        : "";
+
+      const long = ev.longdesc
+        ? `<div class="long">${ev.longdesc}</div>`
+        : (ev.desc ? `<div class="long">${escapeHtml(ev.desc)}</div>` : `<div class="long">Aucune description.</div>`);
+
+      const price = ev.conditions ? `<span class="badge">${escapeHtml(ev.conditions)}</span>` : `<span class="badge">Tarif : à vérifier</span>`;
+
+      const links = `
+        <div class="links">
+          ${ev.externalUrl ? `<a class="btn" href="${escapeHtml(ev.externalUrl)}" target="_blank" rel="noreferrer">Lien officiel</a>` : ""}
+          <button class="ghost" id="copyLink">Copier le lien</button>
+        </div>
+      `;
+
+      const img = ev.image ? `<div class="thumb" style="border:1px solid #eee; border-radius:12px; overflow:hidden;">${`<img loading="lazy" decoding="async" src="${escapeHtml(ev.image)}" alt="${escapeHtml(ev.title)}">`}</div>` : "";
+
+      body.innerHTML = `
+        ${img}
+        <div class="meta" style="white-space:pre-wrap;">${escapeHtml(whenWhere)}</div>
+        <div class="sub" style="margin-top:-4px;">${price}</div>
+        ${long}
+        ${credits}
+        ${imageLink}
+        ${links}
+      `;
+
+      overlay.style.display = "flex";
+      overlay.setAttribute("aria-hidden", "false");
+
+      // Copy share link (hash-based)
+      const share = `${location.origin}${location.pathname}#uid=${encodeURIComponent(ev.uid)}&slug=${encodeURIComponent(ev.slug || "")}`;
+      const copyBtn = document.getElementById("copyLink");
+      if (copyBtn) {
+        copyBtn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(share);
+            copyBtn.textContent = "Copié ✓";
+            setTimeout(() => copyBtn.textContent = "Copier le lien", 1200);
+          } catch {
+            // fallback
+            prompt("Copie ce lien :", share);
+          }
+        };
+      }
+    }
+
+    function closeModal() {
+      const overlay = document.getElementById("overlay");
+      overlay.style.display = "none";
+      overlay.setAttribute("aria-hidden", "true");
+    }
+
+    function wireUI() {
+      let t = null;
+      const rerenderDebounced = () => {
+        clearTimeout(t);
+        t = setTimeout(applyFiltersAndRender, 200);
+      };
+
+      document.getElementById("search").addEventListener("input", rerenderDebounced);
+      document.getElementById("place").addEventListener("input", rerenderDebounced);
+      document.getElementById("onlyFree").addEventListener("change", applyFiltersAndRender);
+      document.getElementById("onlyPaid").addEventListener("change", applyFiltersAndRender);
+
+      document.getElementById("loadMore").addEventListener("click", fetchNextPage);
+
+      document.getElementById("chips").addEventListener("click", (e) => {
+        const chip = e.target.closest(".chip");
+        if (!chip) return;
+        chip.dataset.on = (chip.dataset.on === "1") ? "0" : "1";
+        applyFiltersAndRender();
+      });
+
+      // Modal events
+      document.getElementById("list").addEventListener("click", (e) => {
+        const a = e.target.closest('a[data-details="1"]');
+        if (!a) return;
+        const card = e.target.closest(".card");
+        const uid = card?.dataset?.uid;
+        if (!uid) return;
+
+        // Prevent navigation flicker; we'll still sync hash
+        e.preventDefault();
+        location.hash = `uid=${encodeURIComponent(uid)}`;
+
+        const ev = all.find(x => String(x.uid) === String(uid));
+        if (ev) openModal(ev);
+      });
+
+      document.getElementById("closeModal").addEventListener("click", closeModal);
+      document.getElementById("overlay").addEventListener("click", (e) => {
+        if (e.target.id === "overlay") closeModal();
+      });
+
+      // Open modal if URL already has #uid=...
+      window.addEventListener("hashchange", () => {
+        const params = new URLSearchParams(location.hash.replace(/^#/, ""));
+        const uid = params.get("uid");
+        if (!uid) return;
+        const ev = all.find(x => String(x.uid) === String(uid));
+        if (ev) openModal(ev);
+      });
+    }
+
+    async function init() {
+      wireUI();
+      await loadImageMap();
+      document.getElementById("status").textContent = "Chargement…";
+      await fetchNextPage(); // first page
+      await fetchNextPage(); // preload second page (optional)
+      // If page opened with a hash uid, try to open after we have data
+      const params = new URLSearchParams(location.hash.replace(/^#/, ""));
+      const uid = params.get("uid");
+      if (uid) {
+        const ev = all.find(x => String(x.uid) === String(uid));
+        if (ev) openModal(ev);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
