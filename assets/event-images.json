@@ -1416,6 +1416,42 @@
     "q": "Atelier Vins de Bordeaux La Cité du Vin Bordeaux",
     "updated_at": "2026-01-07T18:03:52.862Z"
   },
+  "72985488": {
+    "url": {
+      "filename": "aa88012f601f4d0b9c1ad96f24010b56.base.image.jpg",
+      "size": {
+        "width": 700,
+        "height": 394
+      },
+      "variants": [
+        {
+          "filename": "aa88012f601f4d0b9c1ad96f24010b56.full.image.jpg",
+          "size": {
+            "width": 1920,
+            "height": 1080
+          },
+          "type": "full"
+        },
+        {
+          "filename": "aa88012f601f4d0b9c1ad96f24010b56.thumb.image.jpg",
+          "size": {
+            "width": 200,
+            "height": 200
+          },
+          "type": "thumbnail"
+        }
+      ],
+      "base": "https://cdn.openagenda.com/main/"
+    },
+    "provider": "OpenAgenda",
+    "page_url": "",
+    "author": "",
+    "license": "",
+    "credit": "Ita Duclair",
+    "source_url": "",
+    "q": "Urzo, l'éléphant méchant Espace Culturel Treulon Bruges",
+    "updated_at": "2026-01-07T22:02:25.853Z"
+  },
   "73134074": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Ferland%2C_De_Villers_-_Le_sorcier_de_l%27isle_d%27Anticosti_-_%C3%80_la_recherche_de_l%27or_-_Au_pays_de_la_Louisiane%2C_1914.djvu/page1-1600px-Ferland%2C_De_Villers_-_Le_sorcier_de_l%27isle_d%27Anticosti_-_%C3%80_la_recherche_de_l%27or_-_Au_pays_de_la_Louisiane%2C_1914.djvu.jpg",
     "provider": "Wikimedia Commons",
@@ -4082,5 +4118,41 @@
     "height": null,
     "q": "Noël à la Cité Bleue Cité Bleue Bordeaux",
     "updated_at": "2026-01-07T18:10:31.673Z"
+  },
+  "urzo-lelephant-mechant-685912": {
+    "url": {
+      "filename": "aa88012f601f4d0b9c1ad96f24010b56.base.image.jpg",
+      "size": {
+        "width": 700,
+        "height": 394
+      },
+      "variants": [
+        {
+          "filename": "aa88012f601f4d0b9c1ad96f24010b56.full.image.jpg",
+          "size": {
+            "width": 1920,
+            "height": 1080
+          },
+          "type": "full"
+        },
+        {
+          "filename": "aa88012f601f4d0b9c1ad96f24010b56.thumb.image.jpg",
+          "size": {
+            "width": 200,
+            "height": 200
+          },
+          "type": "thumbnail"
+        }
+      ],
+      "base": "https://cdn.openagenda.com/main/"
+    },
+    "provider": "OpenAgenda",
+    "page_url": "",
+    "author": "",
+    "license": "",
+    "credit": "Ita Duclair",
+    "source_url": "",
+    "q": "Urzo, l'éléphant méchant Espace Culturel Treulon Bruges",
+    "updated_at": "2026-01-07T22:02:25.853Z"
   }
 }
