@@ -30,7 +30,7 @@ jobs:
           #TARGET_UID: "72985488"
           OFFICIAL_IMAGES: "1"
           OPENAGENDA_KEY: ${{ secrets.OPENAGENDA_KEY }}
-          MAX_EVENTS: "2000"
+          MAX_EVENTS: "5000"
           CONCURRENCY: "1"
           MIN_WIDTH: "1200"
           # Allow only licenses that work for most use-cases (no NC/ND by default)
