@@ -27,6 +27,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --- Config ---
+const TARGET_UID = (process.env.TARGET_UID || "").trim();
 const BORDEAUX_API_BASE =
   "https://datahub.bordeaux-metropole.fr/api/explore/v2.1/catalog/datasets/met_agenda/records";
 
@@ -67,6 +68,23 @@ function normalizeText(s) {
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+async function fetchOneByUid(uid) {
+  const url = new URL(BORDEAUX_API_BASE);
+  url.searchParams.set("where", `uid=${uid}`);
+  url.searchParams.set("limit", "1");
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      "User-Agent": "agenda-bdx-image-enricher/1.0 (GitHub Actions)",
+      Accept: "application/json",
+    },
+  });
+
+  if (!res.ok) throw new Error(`Bordeaux API error ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  return data?.results?.[0] || null;
 }
 
 function tokens(s) {
@@ -414,7 +432,13 @@ function ensureDirExists(p) {
 
 async function main() {
   console.log(`[enrich] Fetching up to ${MAX_EVENTS} events missing images…`);
-  const rows = await fetchEventsMissingImages(MAX_EVENTS);
+  //const rows = await fetchEventsMissingImages(MAX_EVENTS);
+  const rows = TARGET_UID
+  ? [await fetchOneByUid(TARGET_UID)].filter(Boolean)
+  : await fetchEventsMissingImages(MAX_EVENTS);
+
+  console.log(`[enrich] TARGET_UID=${TARGET_UID || "(none)"}; rows=${rows.length}`);
+  //
   console.log(`[enrich] Found ${rows.length} events without images`);
 
   ensureDirExists(OUT_PATH);
