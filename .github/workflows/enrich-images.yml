@@ -27,7 +27,7 @@ jobs:
       - name: Run enrichment script
         run: node scripts/enrich-images.mjs
         env:
-          #TARGET_UID: "37647783"
+          TARGET_UID: "72985488"
           OFFICIAL_IMAGES: "1"
           OPENAGENDA_KEY: ${{ secrets.OPENAGENDA_KEY }}
           MAX_EVENTS: "2000"
