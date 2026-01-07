@@ -128,7 +128,7 @@ async function fetchAgendaPage(offset, limit) {
   const url = new URL(BORDEAUX_API_BASE);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));
-  url.searchParams.set("order_by", "last_modified_date desc");
+  url.searchParams.set("order_by", "updatedat desc");
 
   // NOTE: we intentionally do NOT use the `select` parameter here.
   // The met_agenda schema can evolve and unknown fields would break the job (HTTP 400).
