@@ -19,10 +19,6 @@
  *   OPENVERSE_PAGE_SIZE=20
  */
 
-env:
-  MAX_EVENTS: "5000"
-  CONCURRENCY: "2"
-
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,8 +32,8 @@ const BORDEAUX_API_BASE =
 
 const OUT_PATH = path.resolve(__dirname, "..", "assets", "event-images.json");
 
-const MAX_EVENTS = parseInt(process.env.MAX_EVENTS || "400", 10);
-const CONCURRENCY = parseInt(process.env.CONCURRENCY || "3", 10);
+const MAX_EVENTS = parseInt(process.env.MAX_EVENTS || "5000", 10);
+const CONCURRENCY = parseInt(process.env.CONCURRENCY || "1", 10);
 const MIN_WIDTH = parseInt(process.env.MIN_WIDTH || "1200", 10);
 
 const OPENVERSE_PAGE_SIZE = parseInt(process.env.OPENVERSE_PAGE_SIZE || "20", 10);
