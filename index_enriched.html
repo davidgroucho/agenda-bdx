@@ -426,10 +426,14 @@
       // - older: fields live in `row.record.fields`
       const f = row?.record?.fields ?? row ?? {};
 
-      const uid  = String(f.uid ?? row?.uid ?? "");
-      const slug = String(f.slug ?? row?.slug ?? "");
+      //const uid  = String(f.uid ?? row?.uid ?? "");
+      const uid  = String(f.uid ?? "");
+      //const slug = String(f.slug ?? row?.slug ?? "");
+      const slug = String(f.slug ?? "");
       
-      const title = f.title_fr ?? "(sans titre)";
+      //const title = f.title_fr ?? "(sans titre)";
+      const title = f.title_fr || f.title || "";
+      
       const desc = f.description_fr ?? "";
       const longdesc = f.longdescription_fr ?? "";
       const keywords = f.keywords_fr ?? "";
