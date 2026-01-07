@@ -27,8 +27,9 @@ jobs:
       - name: Run enrichment script
         run: node scripts/enrich-images.mjs
         env:
-          MAX_EVENTS: "500"
-          CONCURRENCY: "3"
+          TARGET_UID: "37647783"
+          MAX_EVENTS: "5000"
+          CONCURRENCY: "1"
           MIN_WIDTH: "1200"
           # Allow only licenses that work for most use-cases (no NC/ND by default)
           ALLOWED_LICENSES: "cc0,pdm,by,by-sa"
