@@ -239,6 +239,18 @@
     "q": "La Foire aux Seconds Vins Hangar 14 Bordeaux",
     "updated_at": "2026-01-07T07:58:11.635Z"
   },
+  "37647783": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Explication_des_ouvrages_de_peinture_et_dessins%2C_sculpture%2C_architecture_et_gravure%2C_des_artistes_vivans_%28IA_explicationdesou1835soci%29.pdf/page1-1600px-Explication_des_ouvrages_de_peinture_et_dessins%2C_sculpture%2C_architecture_et_gravure%2C_des_artistes_vivans_%28IA_explicationdesou1835soci%29.pdf.jpg",
+    "provider": "Wikimedia Commons",
+    "page_url": "https://commons.wikimedia.org/wiki/File:Explication%20des%20ouvrages%20de%20peinture%20et%20dessins%2C%20sculpture%2C%20architecture%20et%20gravure%2C%20des%20artistes%20vivans%20(IA%20explicationdesou1835soci).pdf",
+    "author": "Société des artistes français. Salon Académie royale de peinture et de sculpture (France) Salon (Exhibition : Paris, France) Société nationale des beaux-arts (France)",
+    "license": "Public domain",
+    "credit": "Société des artistes français. Salon Académie royale de peinture et de sculpture (France) Salon (Exhibition : Paris, France) Société nationale des beaux-arts (France) · Public domain",
+    "width": null,
+    "height": null,
+    "q": "Le Petit B Salle de la Glacière Mérignac",
+    "updated_at": "2026-01-07T17:00:00.106Z"
+  },
   "37824668": {
     "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/La_Verdad%2C_el_Tiempo_y_la_Historia.jpg/1600px-La_Verdad%2C_el_Tiempo_y_la_Historia.jpg",
     "provider": "Wikimedia Commons",
@@ -1270,5 +1282,17 @@
     "height": null,
     "q": "Forme et Femmes Piscine les Bains Bègles",
     "updated_at": "2026-01-07T07:59:37.603Z"
+  },
+  "le-petit-b-6122668": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Explication_des_ouvrages_de_peinture_et_dessins%2C_sculpture%2C_architecture_et_gravure%2C_des_artistes_vivans_%28IA_explicationdesou1835soci%29.pdf/page1-1600px-Explication_des_ouvrages_de_peinture_et_dessins%2C_sculpture%2C_architecture_et_gravure%2C_des_artistes_vivans_%28IA_explicationdesou1835soci%29.pdf.jpg",
+    "provider": "Wikimedia Commons",
+    "page_url": "https://commons.wikimedia.org/wiki/File:Explication%20des%20ouvrages%20de%20peinture%20et%20dessins%2C%20sculpture%2C%20architecture%20et%20gravure%2C%20des%20artistes%20vivans%20(IA%20explicationdesou1835soci).pdf",
+    "author": "Société des artistes français. Salon Académie royale de peinture et de sculpture (France) Salon (Exhibition : Paris, France) Société nationale des beaux-arts (France)",
+    "license": "Public domain",
+    "credit": "Société des artistes français. Salon Académie royale de peinture et de sculpture (France) Salon (Exhibition : Paris, France) Société nationale des beaux-arts (France) · Public domain",
+    "width": null,
+    "height": null,
+    "q": "Le Petit B Salle de la Glacière Mérignac",
+    "updated_at": "2026-01-07T17:00:00.106Z"
   }
 }
