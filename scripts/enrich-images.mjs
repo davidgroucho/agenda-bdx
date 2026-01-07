@@ -35,6 +35,11 @@ const OUT_PATH = path.resolve(__dirname, "..", "assets", "event-images.json");
 
 const MAX_EVENTS = parseInt(process.env.MAX_EVENTS || "5000", 10);
 const CONCURRENCY = parseInt(process.env.CONCURRENCY || "1", 10);
+
+const OPENAGENDA_KEY = (process.env.OPENAGENDA_KEY || "").trim();
+// OFFICIAL_IMAGES=1 => on tente OpenAgenda avant Openverse/Wikimedia
+const OFFICIAL_IMAGES = (process.env.OFFICIAL_IMAGES || "").trim() === "1";
+
 const MIN_WIDTH = parseInt(process.env.MIN_WIDTH || "1200", 10);
 
 const OPENVERSE_PAGE_SIZE = parseInt(process.env.OPENVERSE_PAGE_SIZE || "20", 10);
@@ -52,6 +57,37 @@ const PREFERRED_OPENVERSE_PROVIDERS = new Set([
 
 // --- Small helpers ---
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchOpenAgendaEvent({ agendaUID, eventUID, apiKey }) {
+  const url = `https://api.openagenda.com/v2/agendas/${agendaUID}/events/${eventUID}`;
+  const res = await fetch(url, { headers: { key: apiKey, Accept: "application/json" } });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.event || data; // selon la forme de réponse
+}
+
+// Si jamais l'UID n'est PAS le même entre Bordeaux et OpenAgenda,
+// OpenAgenda prévoit aussi une lecture “par identifiant externe” via /events/ext/... :contentReference[oaicite:4]{index=4}
+async function fetchOpenAgendaEventByExt({ agendaUID, extKey, extValue, apiKey }) {
+  const url = `https://api.openagenda.com/v2/agendas/${agendaUID}/events/ext/${extKey}/${extValue}`;
+  const res = await fetch(url, { headers: { key: apiKey, Accept: "application/json" } });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.event || data;
+}
+
+function pickOAImage(evt) {
+  // champs typiques côté OpenAgenda (image / thumbnail / originalImage + credits) :contentReference[oaicite:5]{index=5}
+  const url =
+    evt?.image ||
+    evt?.thumbnail ||
+    evt?.originalImage ||
+    evt?.location?.image ||
+    "";
+  const credit = evt?.imageCredits || evt?.location?.imageCredits || "";
+  return url ? { url, credit } : null;
+}
+
 
 function stripHtml(s) {
   return String(s || "")
@@ -377,6 +413,30 @@ function buildSearchQuery(row) {
 async function pickBestImageForEvent(row) {
   const q = buildSearchQuery(row);
   const evTokens = tokens(q);
+  const agendaUID = String(row?.originagenda_uid || "").trim();
+
+    // 0) Try OpenAgenda "official" image first (if enabled)
+  if (OFFICIAL_IMAGES && OPENAGENDA_KEY && agendaUID) {
+    // tentative 1: supposer que row.uid == eventUID OpenAgenda
+    const oa = await fetchOpenAgendaEvent({
+      agendaUID,
+      eventUID: String(row?.uid || "").trim(),
+      apiKey: OPENAGENDA_KEY
+    });
+
+    const oaImg = oa ? pickOAImage(oa) : null;
+    if (oaImg?.url) {
+      return {
+        url: oaImg.url,
+        provider: "OpenAgenda",
+        page_url: oa?.canonicalUrl || oa?.url || "",
+        author: "",
+        license: "",
+        credit: oaImg.credit || "",
+        source_url: oa?.canonicalUrl || oa?.url || ""
+      };
+    }
+  }
 
   // 1) Openverse
   try {
