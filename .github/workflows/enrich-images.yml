@@ -28,6 +28,8 @@ jobs:
         run: node scripts/enrich-images.mjs
         env:
           #TARGET_UID: "37647783"
+          OFFICIAL_IMAGES: "1"
+          OPENAGENDA_KEY: ${{ secrets.OPENAGENDA_KEY }}
           MAX_EVENTS: "2000"
           CONCURRENCY: "1"
           MIN_WIDTH: "1200"
