@@ -321,6 +321,20 @@
       return IMAGE_MAP;
     }
 
+    function openAgendaImageToUrl(u) {
+      if (!u) return "";
+      if (typeof u === "string") return u;
+    
+      if (typeof u === "object") {
+        const base = (u.base || "").replace(/\/?$/, "/");
+        const variants = Array.isArray(u.variants) ? u.variants : [];
+        const best = variants.find(v => v.type === "full") || variants[0];
+        const filename = best?.filename || u.filename;
+        if (base && filename) return base + filename;
+      }
+      return "";
+    }
+    
     function applyImageEnrichment(ev) {
       if (!IMAGE_MAP) return ev;
       const key1 = String(ev.uid ?? "");
@@ -328,8 +342,9 @@
       const m = (key1 && IMAGE_MAP[key1]) || (key2 && IMAGE_MAP[key2]) || null;
       if (!m || typeof m !== "object") return ev;
 
-      // Only overwrite when missing, to respect upstream images
-      if (!ev.image && typeof m.url === "string") ev.image = m.url;
+      // Only overwrite when missing, to respect upstream images (not sure if comment is still valid)
+      const enrichedUrl = (typeof m.url === "string") ? m.url : openAgendaImageToUrl(m.url);
+      if (!ev.image && enrichedUrl) ev.image = enrichedUrl;
 
       // Extra metadata (used in the modal for attribution)
       if (!ev.imageCredits && typeof m.credit === "string") ev.imageCredits = m.credit;
