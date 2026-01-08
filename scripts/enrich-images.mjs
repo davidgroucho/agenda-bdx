@@ -38,7 +38,7 @@ const CONCURRENCY = parseInt(process.env.CONCURRENCY || "1", 10);
 
 const OPENAGENDA_KEY = (process.env.OPENAGENDA_KEY || "").trim();
 // OFFICIAL_IMAGES=1 => on tente OpenAgenda avant Openverse/Wikimedia
-const OFFICIAL_IMAGES = (process.env.OFFICIAL_IMAGES || "").trim() === "1";
+const OFFICIAL_IMAGES = (process.env.OFFICIAL_IMAGES || "1").trim() === "1";
 
 const MIN_WIDTH = parseInt(process.env.MIN_WIDTH || "1200", 10);
 
@@ -49,11 +49,18 @@ const ALLOWED_LICENSES = (process.env.ALLOWED_LICENSES || "cc0,pdm,by,by-sa")
   .filter(Boolean);
 
 const PREFERRED_OPENVERSE_PROVIDERS = new Set([
-  "wikimedia",
-  "commons.wikimedia.org",
+  "stocksnap",
   "unsplash",
   "pexels",
 ]);
+
+const BORDEAUX_LIBRARIES_INDEX = "https://www.bordeaux.fr/les-bibliotheques-de-bordeaux";
+const BORDEAUX_FR_TIMEOUT_MS = parseInt(process.env.BORDEAUX_FR_TIMEOUT_MS || "20000", 10);
+
+// Optional proxy fallback (handy if bordeaux.fr rate-limits or is slow in CI)
+const BORDEAUX_FR_PROXY_PREFIX = (process.env.BORDEAUX_FR_PROXY_PREFIX || "").trim(); 
+// example value if you choose to use it: "https://r.jina.ai/https://"
+
 
 // --- Small helpers ---
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -64,6 +71,119 @@ async function fetchOpenAgendaEvent({ agendaUID, eventUID, apiKey }) {
   if (!res.ok) return null;
   const data = await res.json();
   return data.event || data; // selon la forme de réponse
+}
+
+function isBibliotheque(row) {
+  const n = normalizeText(row?.location_name || "");
+  return n.includes("bibliotheque"); // handles “bibliothèque” thanks to normalizeText()
+}
+
+async function fetchText(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), BORDEAUX_FR_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        "User-Agent": "agenda-bdx-image-enricher/1.0 (GitHub Actions)",
+        "Accept": "text/html,*/*",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.5",
+      },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function withOptionalProxy(url) {
+  if (!BORDEAUX_FR_PROXY_PREFIX) return url;
+  // expects a prefix that ends with "https://"
+  return BORDEAUX_FR_PROXY_PREFIX + url.replace(/^https?:\/\//, "");
+}
+
+function extractOgImage(html) {
+  const m =
+    html.match(/property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i);
+  return m?.[1] || "";
+}
+
+// Very lightweight “link extraction” without adding cheerio:
+// tries to find anchors pointing to "/bibliotheque-...."
+function extractLibraryLinks(html) {
+  const out = [];
+  const re = /<a[^>]+href=["']([^"']*\/bibliotheque[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m;
+  while ((m = re.exec(html))) {
+    const href = m[1];
+    const text = stripHtml(m[2]);
+    if (!href || !text) continue;
+    out.push({ href, text });
+  }
+  return out;
+}
+
+let librariesCache = null;
+
+async function loadLibrariesIndex() {
+  if (librariesCache) return librariesCache;
+
+  // try direct, then optional proxy
+  let html;
+  try {
+    html = await fetchText(BORDEAUX_LIBRARIES_INDEX);
+  } catch (e) {
+    if (!BORDEAUX_FR_PROXY_PREFIX) throw e;
+    html = await fetchText(withOptionalProxy(BORDEAUX_LIBRARIES_INDEX));
+  }
+
+  const links = extractLibraryLinks(html);
+  librariesCache = links;
+  return links;
+}
+
+async function pickBordeauxLibraryImage(row) {
+  const venue = row?.location_name || "";
+  const venueTokens = tokens(venue);
+
+  const links = await loadLibrariesIndex();
+
+  const best = links
+    .map((x) => ({ x, s: overlapScore(venueTokens, x.text) }))
+    .sort((a, b) => b.s - a.s)[0]?.x;
+
+  if (!best || !best.href) return null;
+
+  const pageUrl = best.href.startsWith("http")
+    ? best.href
+    : new URL(best.href, "https://www.bordeaux.fr").toString();
+
+  let pageHtml;
+  try {
+    pageHtml = await fetchText(pageUrl);
+  } catch (e) {
+    if (!BORDEAUX_FR_PROXY_PREFIX) return null;
+    pageHtml = await fetchText(withOptionalProxy(pageUrl));
+  }
+
+  const img = extractOgImage(pageHtml);
+  if (!img) return null;
+
+  const imgUrl = img.startsWith("http") ? img : new URL(img, pageUrl).toString();
+
+  return {
+    url: imgUrl,
+    provider: "Bordeaux.fr",
+    page_url: pageUrl,
+    author: "",
+    license: "",
+    credit: "",
+    width: null,
+    height: null,
+    source_url: pageUrl,
+  };
 }
 
 // Si jamais l'UID n'est PAS le même entre Bordeaux et OpenAgenda,
@@ -234,7 +354,9 @@ async function openverseSearch(query) {
   // Filter to licenses you accept
   // Openverse expects license codes separated by comma
   url.searchParams.set("license", ALLOWED_LICENSES.join(","));
-
+  url.searchParams.set("excluded_source", "wikimedia");
+  url.searchParams.set("category", "photograph");
+  
   const res = await fetch(url.toString(), {
     headers: {
       "User-Agent": "agenda-bdx-image-enricher/1.0 (GitHub Actions)",
@@ -420,8 +542,24 @@ async function pickBestImageForEvent(row) {
   const q = buildSearchQuery(row);
   const evTokens = tokens(q);
   const agendaUID = String(row?.originagenda_uid || "").trim();
-
-    // 0) Try OpenAgenda "official" image first (if enabled)
+  // 0) Bordeaux API official image (if present)
+  const upstream = bestImageUrlFromRow(row);
+  
+  if (upstream) {
+    return {
+      url: upstream,
+      provider: "Bordeaux Metropole (met_agenda)",
+      page_url: "",
+      author: "",
+      license: "",
+      credit: "",
+      width: null,
+      height: null,
+      source_url: "",
+    };
+  }
+  
+  // 0) Try OpenAgenda "official" image first (if enabled)
   if (OFFICIAL_IMAGES && OPENAGENDA_KEY && agendaUID) {
     // tentative 1: supposer que row.uid == eventUID OpenAgenda
     const oa = await fetchOpenAgendaEvent({
@@ -444,7 +582,18 @@ async function pickBestImageForEvent(row) {
     }
   }
 
-  // 1) Openverse
+
+  // 1) If no official image, and venue is a bibliothèque -> scrape Bordeaux.fr
+  if (isBibliotheque(row)) {
+    try {
+      const libImg = await pickBordeauxLibraryImage(row);
+      if (libImg?.url) return libImg;
+    } catch (e) {
+      // ignore and continue
+    }
+  }
+  
+  // 2) Openverse
   try {
     const results = await openverseSearch(q);
     const best = results
@@ -460,7 +609,7 @@ async function pickBestImageForEvent(row) {
     // continue to fallback
   }
 
-  // 2) Wikimedia Commons fallback
+  // 3) Wikimedia Commons fallback
   try {
     const files = await commonsSearchFiles(q);
     const titles = files.map((x) => x?.title).filter(Boolean).slice(0, 6);
