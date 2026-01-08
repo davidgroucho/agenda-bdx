@@ -403,11 +403,17 @@ function createLimiter(max) {
 
 // --- Main enrichment logic ---
 function buildSearchQuery(row) {
-  const title = row?.title_fr || row?.title || row?.title_en || "";
   const place = row?.location_name || row?.location || row?.location_title || "";
+  const address = row?.location_address || "";
+  const district = row?.location_district || "";
   const city = row?.location_city || row?.city || "Bordeaux";
-  // Add city to disambiguate
-  return [title, place, city].filter(Boolean).join(" ");
+
+  // Prefer venue-based query (more “generic image of the venue”)
+  if (place) return [place, address, district, city, "France"].filter(Boolean).join(" ");
+
+  // Fallback if venue missing
+  const title = row?.title_fr || row?.title || row?.title_en || "";
+  return [title, city, "France"].filter(Boolean).join(" ");
 }
 
 async function pickBestImageForEvent(row) {
