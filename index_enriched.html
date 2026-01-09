@@ -561,7 +561,6 @@
 
     function render(ev) {
       const where = [ev.venue, ev.district || ev.city].filter(Boolean).join(" · ");
-      const addr = ev.address ? `<span class="badge">${escapeHtml(ev.address)}</span>` : "";
       const price = ev.conditions
         ? `<span class="badge">${escapeHtml(ev.conditions.slice(0, 40))}${ev.conditions.length>40?"…":""}</span>`
         : `<span class="badge">Tarif : à vérifier</span>`;
@@ -582,7 +581,6 @@
             ${ev.desc ? `<p class="desc">${escapeHtml(ev.desc).slice(0, 220)}${ev.desc.length>220?"…":""}</p>` : ""}
             <div class="sub" style="gap:6px;">
               ${price}
-              ${addr}
             </div>
             <div class="actions">
               <a class="mutedlink" href="${internal}" data-details="1">Détails</a>
