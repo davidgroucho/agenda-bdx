@@ -314,7 +314,6 @@ function pickOAImage(evt) {
   return url ? { url, credit } : null;
 }
 
-
 function stripHtml(s) {
   return String(s || "")
     .replace(/<[^>]*>/g, " ")
