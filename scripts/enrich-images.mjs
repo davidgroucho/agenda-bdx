@@ -5,7 +5,7 @@
  * What it does:
  *  - Fetch events from Bordeaux Metropole OpenData (Opendatasoft API v2.1)
  *  - Keep only events with no upstream image (location_image empty/null)
- *  - Search a suitable openly-licensed image (Openverse first, Wikimedia Commons fallback)
+ *  - Search a suitable openly-licensed image (Openverse only)
  *  - Write/merge assets/event-images.json keyed by uid (and optionally slug)
  *
  * Usage (local):
@@ -37,7 +37,7 @@ const MAX_EVENTS = parseInt(process.env.MAX_EVENTS || "5000", 10);
 const CONCURRENCY = parseInt(process.env.CONCURRENCY || "1", 10);
 
 const OPENAGENDA_KEY = (process.env.OPENAGENDA_KEY || "").trim();
-// OFFICIAL_IMAGES=1 => on tente OpenAgenda avant Openverse/Wikimedia
+// OFFICIAL_IMAGES=1 => on tente OpenAgenda avant Openverse
 const OFFICIAL_IMAGES = (process.env.OFFICIAL_IMAGES || "1").trim() === "1";
 
 const MIN_WIDTH = parseInt(process.env.MIN_WIDTH || "600", 10);
@@ -516,97 +516,6 @@ function toMappingFromOpenverse(r) {
   };
 }
 
-// --- Wikimedia Commons fallback (MediaWiki Action API) ---
-async function commonsSearchFiles(query) {
-  const url = new URL("https://commons.wikimedia.org/w/api.php");
-  url.searchParams.set("action", "query");
-  url.searchParams.set("format", "json");
-  url.searchParams.set("origin", "*");
-  url.searchParams.set("list", "search");
-  url.searchParams.set("srnamespace", "6"); // File:
-  url.searchParams.set("srlimit", "10");
-  url.searchParams.set("srsearch", query);
-
-  const res = await fetch(url.toString(), {
-    headers: {
-      "User-Agent": "agenda-bdx-image-enricher/1.0 (GitHub Actions)",
-      Accept: "application/json",
-    },
-  });
-  if (!res.ok) throw new Error(`Commons search error ${res.status}`);
-  const data = await res.json();
-  return Array.isArray(data?.query?.search) ? data.query.search : [];
-}
-
-async function commonsFetchImageInfo(titles) {
-  const url = new URL("https://commons.wikimedia.org/w/api.php");
-  url.searchParams.set("action", "query");
-  url.searchParams.set("format", "json");
-  url.searchParams.set("origin", "*");
-  url.searchParams.set("prop", "imageinfo");
-  url.searchParams.set("iiprop", "url|extmetadata");
-  // Ask Commons for a "big enough" thumbnail (original url is usually in `url`)
-  url.searchParams.set("iiurlwidth", String(Math.max(MIN_WIDTH, 1600)));
-  url.searchParams.set("titles", titles.join("|"));
-
-  const res = await fetch(url.toString(), {
-    headers: {
-      "User-Agent": "agenda-bdx-image-enricher/1.0 (GitHub Actions)",
-      Accept: "application/json",
-    },
-  });
-  if (!res.ok) throw new Error(`Commons imageinfo error ${res.status}`);
-  const data = await res.json();
-  const pages = data?.query?.pages || {};
-  return Object.values(pages);
-}
-
-function scoreCommonsPage(evTokens, page) {
-  const title = page?.title || "";
-  const info = page?.imageinfo?.[0] || {};
-  const meta = info?.extmetadata || {};
-  const artist = stripHtml(meta?.Artist?.value || "");
-  const license = stripHtml(meta?.LicenseShortName?.value || "");
-
-  let score = 0;
-  score += overlapScore(evTokens, title) * 3;
-  score += overlapScore(evTokens, artist) * 1;
-
-  // Prefer well-identified licenses
-  if (license) score += 2;
-
-  // Prefer bigger images (if dims present)
-  const w = info?.width || 0;
-  const h = info?.height || 0;
-  if (w >= 2000 || h >= 2000) score += 3;
-  else if (w >= MIN_WIDTH) score += 2;
-
-  return score;
-}
-
-function toMappingFromCommons(page) {
-  const info = page?.imageinfo?.[0] || {};
-  const meta = info?.extmetadata || {};
-  const author = stripHtml(meta?.Artist?.value || "");
-  const license = stripHtml(meta?.LicenseShortName?.value || meta?.License?.value || "");
-
-  const pageTitle = page?.title || "";
-  const commonsPageUrl = pageTitle
-    ? `https://commons.wikimedia.org/wiki/${encodeURIComponent(pageTitle).replace(/%3A/g, ":")}`
-    : "";
-
-  return {
-    url: info?.thumburl || info?.url || "",
-    provider: "Wikimedia Commons",
-    page_url: commonsPageUrl,
-    author,
-    license,
-    credit: [author, license].filter(Boolean).join(" · "),
-    width: info?.width || null,
-    height: info?.height || null,
-  };
-}
-
 // --- Concurrency limiter ---
 function createLimiter(max) {
   let active = 0;
@@ -716,25 +625,6 @@ async function pickBestImageForEvent(row) {
     }
   } catch (e) {
     // continue to fallback
-  }
-
-  // 3) Wikimedia Commons fallback
-  try {
-    const files = await commonsSearchFiles(q);
-    const titles = files.map((x) => x?.title).filter(Boolean).slice(0, 6);
-    if (!titles.length) return null;
-
-    const pages = await commonsFetchImageInfo(titles);
-    const bestPage = pages
-      .map((p) => ({ p, s: scoreCommonsPage(evTokens, p) }))
-      .sort((a, b) => b.s - a.s)[0]?.p;
-
-    if (bestPage) {
-      const mapped = toMappingFromCommons(bestPage);
-      if (mapped.url) return mapped;
-    }
-  } catch (e) {
-    // ignore
   }
 
   return null;
