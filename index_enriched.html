@@ -383,6 +383,8 @@
     const PAGE_SIZE = 24;
     let offset = 0;
     let all = []; // accumulated events
+    let allLoaded = false;
+    let loadingAll = false;
 
     function addMonths(d, n) {
       const x = new Date(d);
@@ -647,11 +649,13 @@
       el.textContent = "";
     }
 
-    async function fetchNextPage() {
+    async function fetchPage({ silent = false } = {}) {
       clearError();
       const btn = document.getElementById("loadMore");
-      btn.disabled = true;
-      btn.textContent = "Chargement…";
+      if (!silent) {
+        btn.disabled = true;
+        btn.textContent = "Chargement…";
+      }
 
       try {
         const url = buildApiUrl({ offset, limit: PAGE_SIZE });
@@ -671,12 +675,39 @@
 
         offset += PAGE_SIZE;
         applyFiltersAndRender();
+        return rows.length;
 
       } catch (e) {
         showError(String(e?.stack || e?.message || e));
+        return 0;
       } finally {
-        btn.disabled = false;
-        btn.textContent = "Afficher plus";
+        if (!silent) {
+          btn.disabled = false;
+          btn.textContent = "Afficher plus";
+        }
+      }
+    }
+
+    async function fetchNextPage() {
+      await fetchPage({ silent: false });
+    }
+
+    async function loadAllActiveEvents() {
+      if (allLoaded || loadingAll) return;
+      loadingAll = true;
+      let hadError = false;
+      try {
+        let fetched = PAGE_SIZE;
+        while (fetched === PAGE_SIZE) {
+          fetched = await fetchPage({ silent: true });
+          if (fetched === 0) break;
+        }
+        if (fetched < PAGE_SIZE) allLoaded = true;
+      } catch {
+        hadError = true;
+      } finally {
+        if (hadError) allLoaded = false;
+        loadingAll = false;
       }
     }
 
@@ -759,7 +790,15 @@
       let t = null;
       const rerenderDebounced = () => {
         clearTimeout(t);
-        t = setTimeout(applyFiltersAndRender, 200);
+        t = setTimeout(() => {
+          const q = document.getElementById("search").value.trim();
+          const place = document.getElementById("place").value.trim();
+          if (q || place) {
+            loadAllActiveEvents().then(applyFiltersAndRender);
+            return;
+          }
+          applyFiltersAndRender();
+        }, 200);
       };
 
       document.getElementById("search").addEventListener("input", rerenderDebounced);
