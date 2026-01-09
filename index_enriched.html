@@ -393,7 +393,9 @@
     function buildApiUrl({ q = CULTURE_Q, limit = PAGE_SIZE, offset = 0 } = {}) {
       const now = new Date();
       const end = addMonths(now, 6);
-      const where = `${DATE_FIELD} >= date'${isoDate(now)}' AND ${DATE_FIELD} < date'${isoDate(end)}'`;
+      const nowIso = isoDate(now);
+      const endIso = isoDate(end);
+      const where = `(${DATE_FIELD} < date'${endIso}') AND ((${END_FIELD} >= date'${nowIso}') OR (${DATE_FIELD} >= date'${nowIso}'))`;
 
       const u = new URL(BASE);
       u.searchParams.set("select", SELECT_FIELDS);
@@ -559,11 +561,21 @@
       return true;
     }
 
+    function isOngoing(ev) {
+      if (!ev.start || !ev.end) return false;
+      const now = new Date();
+      const start = new Date(ev.start);
+      const end = new Date(ev.end);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+      return start < now && end >= now;
+    }
+
     function render(ev) {
       const where = [ev.venue, ev.district || ev.city].filter(Boolean).join(" · ");
       const price = ev.conditions
         ? `<span class="badge">${escapeHtml(ev.conditions.slice(0, 40))}${ev.conditions.length>40?"…":""}</span>`
         : `<span class="badge">Tarif : à vérifier</span>`;
+      const ongoing = isOngoing(ev) ? `<span class="badge">En cours</span>` : "";
 
       const img = ev.image ? `<img loading="lazy" decoding="async" src="${escapeHtml(ev.image)}" alt="${escapeHtml(ev.title)}">` : "";
 
@@ -577,6 +589,7 @@
             <div class="sub">
               <span class="badge">${escapeHtml(ev.dateLabel || "Date à confirmer")}</span>
               ${where ? `<span class="badge">${escapeHtml(where)}</span>` : ""}
+              ${ongoing}
             </div>
             ${ev.desc ? `<p class="desc">${escapeHtml(ev.desc).slice(0, 220)}${ev.desc.length>220?"…":""}</p>` : ""}
             <div class="sub" style="gap:6px;">
