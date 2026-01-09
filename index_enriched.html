@@ -363,12 +363,13 @@
 
     // Fields confirmed from your console:
     const DATE_FIELD = "firstdate_begin";
-    const END_FIELD = "firstdate_end";
+    const END_FIELD = "lastdate_end";
 
     // Reduce payload (keep only what we need)
     const SELECT_FIELDS = [
       "uid","slug","title_fr","description_fr","longdescription_fr",
       "daterange_fr", DATE_FIELD, END_FIELD,
+      "lastdate_begin","lastdate_end",
       "keywords_fr","originagenda_title","updatedat",
       "conditions_fr","links","onlineaccesslink",
       "location_name","location_address","location_postalcode","location_city","location_district",
@@ -411,6 +412,13 @@
       return String(s ?? "")
         .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
         .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+
+    function formatDateFr(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(d);
     }
 
     function firstUrlFromAny(value) {
@@ -456,6 +464,8 @@
       const longdesc = f.longdescription_fr ?? "";
       const keywords = f.keywords_fr ?? "";
       const dateLabel = f.daterange_fr ?? "";
+      const lastBegin = f.lastdate_begin ?? null;
+      const lastEnd = f.lastdate_end ?? null;
 
       const venue = f.location_name ?? "";
       const addressParts = [f.location_address, f.location_postalcode, f.location_city].filter(Boolean);
@@ -485,8 +495,10 @@
         longdesc,
         keywords,
         dateLabel,
+        lastBegin,
+        lastEnd,
         start: f[DATE_FIELD] ?? null,
-        end: f[END_FIELD] ?? null,
+        end: f[END_FIELD] ?? f.firstdate_end ?? null,
         agenda: f.originagenda_title ?? "",
         venue, address, district, city,
         image, imageCredits,
@@ -576,6 +588,9 @@
         ? `<span class="badge">${escapeHtml(ev.conditions.slice(0, 40))}${ev.conditions.length>40?"…":""}</span>`
         : `<span class="badge">Tarif : à vérifier</span>`;
       const ongoing = isOngoing(ev) ? `<span class="badge">En cours</span>` : "";
+      const lastEndLabel = (ev.lastEnd && ev.start && ev.lastEnd !== ev.start)
+        ? `<span class="badge">Jusqu’au ${escapeHtml(formatDateFr(ev.lastEnd))}</span>`
+        : "";
 
       const img = ev.image ? `<img loading="lazy" decoding="async" src="${escapeHtml(ev.image)}" alt="${escapeHtml(ev.title)}">` : "";
 
@@ -590,6 +605,7 @@
               <span class="badge">${escapeHtml(ev.dateLabel || "Date à confirmer")}</span>
               ${where ? `<span class="badge">${escapeHtml(where)}</span>` : ""}
               ${ongoing}
+              ${lastEndLabel}
             </div>
             ${ev.desc ? `<p class="desc">${escapeHtml(ev.desc).slice(0, 220)}${ev.desc.length>220?"…":""}</p>` : ""}
             <div class="sub" style="gap:6px;">
