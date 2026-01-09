@@ -14,7 +14,7 @@
  * Env vars (optional):
  *   MAX_EVENTS=300            # limit number of events processed per run
  *   CONCURRENCY=3             # parallel searches
- *   MIN_WIDTH=1200            # skip tiny images
+ *   MIN_WIDTH=600            # skip tiny images
  *   ALLOWED_LICENSES=cc0,pdm,by,by-sa   # Openverse license codes (comma-separated)
  *   OPENVERSE_PAGE_SIZE=20
  */
@@ -40,7 +40,7 @@ const OPENAGENDA_KEY = (process.env.OPENAGENDA_KEY || "").trim();
 // OFFICIAL_IMAGES=1 => on tente OpenAgenda avant Openverse/Wikimedia
 const OFFICIAL_IMAGES = (process.env.OFFICIAL_IMAGES || "1").trim() === "1";
 
-const MIN_WIDTH = parseInt(process.env.MIN_WIDTH || "1200", 10);
+const MIN_WIDTH = parseInt(process.env.MIN_WIDTH || "600", 10);
 
 const OPENVERSE_PAGE_SIZE = parseInt(process.env.OPENVERSE_PAGE_SIZE || "20", 10);
 const ALLOWED_LICENSES = (process.env.ALLOWED_LICENSES || "cc0,pdm,by,by-sa")
@@ -54,8 +54,9 @@ const PREFERRED_OPENVERSE_PROVIDERS = new Set([
   "pexels",
 ]);
 
-const BORDEAUX_LIBRARIES_INDEX = "https://www.bordeaux.fr/les-bibliotheques-de-bordeaux";
+const BORDEAUX_LIBRARIES_INDEX = "https://bibliotheque.bordeaux.fr/pratique/les-bibliotheques";
 const BORDEAUX_FR_TIMEOUT_MS = parseInt(process.env.BORDEAUX_FR_TIMEOUT_MS || "20000", 10);
+const DEBUG_LIBS = (process.env.DEBUG_LIBS || "").trim() === "1";
 
 // Optional proxy fallback (handy if bordeaux.fr rate-limits or is slow in CI)
 const BORDEAUX_FR_PROXY_PREFIX = (process.env.BORDEAUX_FR_PROXY_PREFIX || "").trim(); 
@@ -75,6 +76,9 @@ async function fetchOpenAgendaEvent({ agendaUID, eventUID, apiKey }) {
 
 function isBibliotheque(row) {
   const n = normalizeText(row?.location_name || "");
+  if (DEBUG_LIBS) {
+    console.log(`[libs] location_name="${row?.location_name || ""}" normalized="${n}"`);
+  }
   return n.includes("bibliotheque"); // handles “bibliothèque” thanks to normalizeText()
 }
 
@@ -105,6 +109,8 @@ function withOptionalProxy(url) {
 
 function extractOgImage(html) {
   const m =
+    html.match(/property=["']og:image:secure_url["'][^>]*content=["']([^"']+)["']/i) ||
+    html.match(/property=["']og:image:url["'][^>]*content=["']([^"']+)["']/i) ||
     html.match(/property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
     html.match(/name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i);
   return m?.[1] || "";
@@ -114,12 +120,21 @@ function extractOgImage(html) {
 // tries to find anchors pointing to "/bibliotheque-...."
 function extractLibraryLinks(html) {
   const out = [];
-  const re = /<a[^>]+href=["']([^"']*\/bibliotheque[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const re = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let m;
   while ((m = re.exec(html))) {
     const href = m[1];
     const text = stripHtml(m[2]);
     if (!href || !text) continue;
+
+    const hrefNorm = normalizeText(href);
+    const textNorm = normalizeText(text);
+    const looksLikeLibrary =
+      hrefNorm.includes("bibliotheque") ||
+      hrefNorm.includes("bibliotheque bordeaux fr") ||
+      textNorm.includes("bibliotheque");
+
+    if (!looksLikeLibrary) continue;
     out.push({ href, text });
   }
   return out;
@@ -140,21 +155,85 @@ async function loadLibrariesIndex() {
   }
 
   const links = extractLibraryLinks(html);
-  librariesCache = links;
-  return links;
+  librariesCache = { links, html };
+  return librariesCache;
+}
+
+function extractAttr(tag, name) {
+  const re = new RegExp(`${name}=["']([^"']+)["']`, "i");
+  return tag.match(re)?.[1] || "";
+}
+
+function decodePlus(input) {
+  try {
+    return decodeURIComponent(String(input).replace(/\+/g, " "));
+  } catch {
+    return String(input);
+  }
+}
+
+function extractLibraryCardImage(html, libraryName) {
+  const target = normalizeText(libraryName);
+  if (!target) return "";
+  const re = /<img[^>]+>/gi;
+  let m;
+  let logged = 0;
+  while ((m = re.exec(html))) {
+    const tag = m[0];
+    const src = extractAttr(tag, "src");
+    if (!src) continue;
+
+    const titleAttr = extractAttr(tag, "title");
+    const titleParam = src.match(/[?&]title=([^&]+)/i)?.[1] || "";
+    const candidate = normalizeText(titleAttr || decodePlus(titleParam));
+    if (!candidate) continue;
+
+    if (DEBUG_LIBS && logged < 6) {
+      console.log(`[libs] img title="${titleAttr}" candidate="${candidate}" src="${src}"`);
+      logged += 1;
+    }
+
+    if (candidate.includes(target) || target.includes(candidate)) {
+      if (DEBUG_LIBS) {
+        console.log(`[libs] matched "${libraryName}" with candidate "${candidate}"`);
+      }
+      return src;
+    }
+  }
+  if (DEBUG_LIBS) {
+    console.log(`[libs] no image match for "${libraryName}" (target="${target}")`);
+  }
+  return "";
 }
 
 async function pickBordeauxLibraryImage(row) {
   const venue = row?.location_name || "";
   const venueTokens = tokens(venue);
 
-  const links = await loadLibrariesIndex();
+  const { links, html } = await loadLibrariesIndex();
 
   const best = links
     .map((x) => ({ x, s: overlapScore(venueTokens, x.text) }))
     .sort((a, b) => b.s - a.s)[0]?.x;
 
-  if (!best || !best.href) return null;
+  if (!best || !best.href) {
+    const fallbackImg = html ? extractLibraryCardImage(html, venue) : "";
+    if (!fallbackImg) return null;
+    const imgUrl = fallbackImg.startsWith("http")
+      ? fallbackImg
+      : new URL(fallbackImg, "https://bibliotheque.bordeaux.fr").toString();
+    return {
+      url: imgUrl,
+      provider: "Bibliotheque Bordeaux",
+      page_url: BORDEAUX_LIBRARIES_INDEX,
+      author: "",
+      license: "",
+      credit: "",
+      width: null,
+      height: null,
+      source_url: BORDEAUX_LIBRARIES_INDEX,
+    };
+  }
 
   const pageUrl = best.href.startsWith("http")
     ? best.href
@@ -168,14 +247,19 @@ async function pickBordeauxLibraryImage(row) {
     pageHtml = await fetchText(withOptionalProxy(pageUrl));
   }
 
-  const img = extractOgImage(pageHtml);
+  let img = extractOgImage(pageHtml);
+  if (!img && html) {
+    img = extractLibraryCardImage(html, best.text);
+  }
   if (!img) return null;
 
-  const imgUrl = img.startsWith("http") ? img : new URL(img, pageUrl).toString();
+  const imgUrl = img.startsWith("http")
+    ? img
+    : new URL(img, "https://bibliotheque.bordeaux.fr").toString();
 
   return {
     url: imgUrl,
-    provider: "Bordeaux.fr",
+    provider: "Bibliotheque Bordeaux",
     page_url: pageUrl,
     author: "",
     license: "",
@@ -584,6 +668,9 @@ async function pickBestImageForEvent(row) {
 
 
   // 1) If no official image, and venue is a bibliothèque -> scrape Bordeaux.fr
+  if (DEBUG_LIBS) {
+    console.log("[libs] checking bibliotheque branch");
+  }
   if (isBibliotheque(row)) {
     try {
       const libImg = await pickBordeauxLibraryImage(row);
