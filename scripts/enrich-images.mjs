@@ -164,6 +164,17 @@ function extractAttr(tag, name) {
   return tag.match(re)?.[1] || "";
 }
 
+function firstNonEmpty(values) {
+  for (const v of values) {
+    if (v) return v;
+  }
+  return "";
+}
+
+function extractTitleParam(url) {
+  return url.match(/[?&]title=([^&]+)/i)?.[1] || "";
+}
+
 function decodePlus(input) {
   try {
     return decodeURIComponent(String(input).replace(/\+/g, " "));
@@ -180,16 +191,27 @@ function extractLibraryCardImage(html, libraryName) {
   let logged = 0;
   while ((m = re.exec(html))) {
     const tag = m[0];
-    const src = extractAttr(tag, "src");
-    if (!src) continue;
+    const src = firstNonEmpty([
+      extractAttr(tag, "src"),
+      extractAttr(tag, "data-src"),
+      extractAttr(tag, "data-original"),
+      extractAttr(tag, "data-lazy"),
+    ]);
+    const srcset = extractAttr(tag, "srcset");
+    const srcsetUrl = srcset ? srcset.split(",")[0]?.trim().split(" ")[0] : "";
+    const urlForTitle = firstNonEmpty([src, srcsetUrl]);
+    if (!urlForTitle) continue;
 
     const titleAttr = extractAttr(tag, "title");
-    const titleParam = src.match(/[?&]title=([^&]+)/i)?.[1] || "";
-    const candidate = normalizeText(titleAttr || decodePlus(titleParam));
+    const altAttr = extractAttr(tag, "alt");
+    const titleParam = extractTitleParam(urlForTitle);
+    const candidate = normalizeText(firstNonEmpty([titleAttr, altAttr, decodePlus(titleParam)]));
     if (!candidate) continue;
 
     if (DEBUG_LIBS && logged < 6) {
-      console.log(`[libs] img title="${titleAttr}" candidate="${candidate}" src="${src}"`);
+      console.log(
+        `[libs] img title="${titleAttr}" alt="${altAttr}" candidate="${candidate}" src="${urlForTitle}"`
+      );
       logged += 1;
     }
 
