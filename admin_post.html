@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agenda Alternatif — Admin BS</title>
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#f7f7f7; color:#111; margin:0; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 20px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    .sub { color:#555; font-size: 13px; margin-bottom: 14px; }
+    .row { display:flex; gap: 12px; align-items:center; flex-wrap: wrap; }
+    .btn { border:1px solid #111; background:#111; color:#fff; padding:6px 10px; border-radius:10px; cursor:pointer; font-size:12px; }
+    .ghost { border:1px solid #ddd; background:#fff; color:#111; padding:6px 10px; border-radius:10px; cursor:pointer; font-size:12px; }
+    .list { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+    @media (max-width: 900px) { .list { grid-template-columns: 1fr; } }
+    .card { background:#fff; border:1px solid #eee; border-radius:12px; overflow:hidden; display:flex; gap:12px; padding:12px; }
+    .thumb { width:160px; aspect-ratio: 16/9; background:#f2f2f2; display:flex; align-items:center; justify-content:center; border-radius:10px; overflow:hidden; flex-shrink:0; }
+    .thumb img { width:100%; height:100%; object-fit: contain; }
+    .meta { font-size:12px; color:#555; margin-top:4px; }
+    .title { font-weight:700; font-size:14px; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .status { font-size: 12px; color:#555; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Admin — Post Bluesky</h1>
+    <div class="sub">Copie le texte et l'URL image pour publier manuellement.</div>
+    <div class="row" style="margin-bottom:12px;">
+      <button class="ghost" id="reload">Recharger</button>
+      <span class="status" id="status">Chargement…</span>
+    </div>
+    <section class="list" id="list"></section>
+  </div>
+
+  <script>
+    const BASE = "https://datahub.bordeaux-metropole.fr/api/explore/v2.1/catalog/datasets/met_agenda/records";
+    const DATE_FIELD = "firstdate_begin";
+    const END_FIELD = "lastdate_end";
+    const CULTURE_Q = '(concert OR expo OR exposition OR théâtre OR theatre OR spectacle OR scène OR "musique" OR "festival" OR "performance" OR "danse")';
+    const SELECT_FIELDS = [
+      "uid","slug","title_fr","description_fr","daterange_fr", DATE_FIELD, END_FIELD,
+      "lastdate_begin","lastdate_end",
+      "location_name","location_city","location_district",
+      "location_image","location_imagecredits",
+      "links","onlineaccesslink","location_website","location_links"
+    ].join(",");
+
+    const IMAGE_ENRICHMENT_URL = "assets/event-images.json";
+    const MANUAL_IMAGE_URL = "assets/manual-images.json";
+    const AUDITORIUM_FALLBACK_IMAGE = "https://lh3.googleusercontent.com/p/AF1QipPNYaRAe1gcbz-4dCGAcQbMOHmlHvtPba13rdHW=s680-w680-h510";
+    const FEMINA_FALLBACK_IMAGE = "https://lh3.googleusercontent.com/gps-cs-s/AG0ilSzo_JP31b9T-lmJag6OXDc7CuGgTGcuvPWZdwpXfPWeYNIzoF2Tyu_lyJLOjYz5-fYxucWTTCRxxbHYhvaKrWQ2OJFyOcmM9bMkAmEb1tfsngJV43XpT9OU8iABwWWsRjEjRM2iPQ=s680-w680-h510";
+    const ADIE_FALLBACK_IMAGE = "https://lh3.googleusercontent.com/p/AF1QipMkRk6xJ2pLQN_DkRsG1PFfTQltbUGoY8iH_EHW=s680-w680-h510";
+
+    let IMAGE_MAP = null;
+    let MANUAL_IMAGE_MAP = null;
+
+    function isoDate(d) { return d.toISOString().slice(0,10); }
+    function addDays(d, n) {
+      const x = new Date(d);
+      x.setDate(x.getDate() + n);
+      return x;
+    }
+
+    function buildApiUrl() {
+      const now = new Date();
+      const end = addDays(now, 15);
+      const nowIso = isoDate(now);
+      const endIso = isoDate(end);
+      const where = `(${DATE_FIELD} >= date'${nowIso}') AND (${DATE_FIELD} < date'${endIso}')`;
+
+      const u = new URL(BASE);
+      u.searchParams.set("select", SELECT_FIELDS);
+      u.searchParams.set("q", CULTURE_Q);
+      u.searchParams.set("where", where);
+      u.searchParams.set("order_by", `${DATE_FIELD} asc`);
+      u.searchParams.set("limit", "200");
+      return u.toString();
+    }
+
+    async function loadImageMap() {
+      if (IMAGE_MAP) return IMAGE_MAP;
+      try {
+        const res = await fetch(IMAGE_ENRICHMENT_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("no map");
+        const data = await res.json();
+        if (Array.isArray(data?.items)) {
+          IMAGE_MAP = Object.fromEntries(data.items.filter(x => x?.uid).map(x => [String(x.uid), x]));
+        } else {
+          IMAGE_MAP = data && typeof data === "object" ? data : {};
+        }
+      } catch {
+        IMAGE_MAP = {};
+      }
+      return IMAGE_MAP;
+    }
+
+    async function loadManualImageMap() {
+      if (MANUAL_IMAGE_MAP) return MANUAL_IMAGE_MAP;
+      try {
+        const res = await fetch(MANUAL_IMAGE_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("no manual map");
+        const data = await res.json();
+        MANUAL_IMAGE_MAP = data && typeof data === "object" ? data : {};
+      } catch {
+        MANUAL_IMAGE_MAP = {};
+      }
+      return MANUAL_IMAGE_MAP;
+    }
+
+    function openAgendaImageToUrl(u) {
+      if (!u) return "";
+      if (typeof u === "string") return u;
+      if (typeof u === "object") {
+        const base = (u.base || "").replace(/\/?$/, "/");
+        const variants = Array.isArray(u.variants) ? u.variants : [];
+        const best = variants.find(v => v.type === "full") || variants[0];
+        const filename = best?.filename || u.filename;
+        if (base && filename) return base + filename;
+      }
+      return "";
+    }
+
+    function firstUrlFromAny(value) {
+      if (!value) return "";
+      if (typeof value === "string") return value;
+      if (Array.isArray(value)) {
+        for (const v of value) {
+          const u = firstUrlFromAny(v);
+          if (u) return u;
+        }
+        return "";
+      }
+      if (typeof value === "object") {
+        const candidates = ["url","href","link","website","value"];
+        for (const k of candidates) {
+          if (value[k] && typeof value[k] === "string") return value[k];
+        }
+        for (const k of Object.keys(value)) {
+          const u = firstUrlFromAny(value[k]);
+          if (u) return u;
+        }
+      }
+      return "";
+    }
+
+    function normalize(row) {
+      const f = row?.record?.fields ?? row ?? {};
+      const uid = String(f.uid ?? "");
+      const slug = String(f.slug ?? "");
+      const title = f.title_fr || f.title || "";
+      const dateLabel = f.daterange_fr ?? "";
+      const venue = f.location_name ?? "";
+      const district = f.location_district ?? "";
+      const city = f.location_city ?? "";
+      const image = f.location_image ?? "";
+      const externalUrl =
+        firstUrlFromAny(f.links) ||
+        (typeof f.onlineaccesslink === "string" ? f.onlineaccesslink : "") ||
+        (typeof f.location_website === "string" ? f.location_website : "") ||
+        firstUrlFromAny(f.location_links) ||
+        "";
+
+      return {
+        uid,
+        slug,
+        title,
+        dateLabel,
+        start: f[DATE_FIELD] ?? null,
+        end: f[END_FIELD] ?? null,
+        venue, district, city,
+        image,
+        externalUrl
+      };
+    }
+
+    function applyImageEnrichment(ev) {
+      if (!IMAGE_MAP) return ev;
+      const key1 = String(ev.uid ?? "");
+      const key2 = String(ev.slug ?? "");
+      const m = (key1 && IMAGE_MAP[key1]) || (key2 && IMAGE_MAP[key2]) || null;
+      if (!m || typeof m !== "object") return ev;
+      const enrichedUrl = (typeof m.url === "string") ? m.url : openAgendaImageToUrl(m.url);
+      if (!ev.image && enrichedUrl) ev.image = enrichedUrl;
+      if (!ev.externalUrl && typeof m.source_url === "string") ev.externalUrl = m.source_url;
+      return ev;
+    }
+
+    function applyManualImage(ev) {
+      if (ev.image) return ev;
+      if (!MANUAL_IMAGE_MAP) return ev;
+      const key1 = String(ev.uid ?? "");
+      const key2 = String(ev.slug ?? "");
+      const m = (key1 && MANUAL_IMAGE_MAP[key1]) || (key2 && MANUAL_IMAGE_MAP[key2]) || null;
+      if (!m) return ev;
+      const url = (typeof m === "string") ? m : (typeof m.url === "string" ? m.url : "");
+      if (url) ev.image = url;
+      return ev;
+    }
+
+    function applyVenueFallbackImage(ev) {
+      if (ev.image) return ev;
+      const place = ev.district || ev.city;
+      if (ev.venue === "Auditorium de Bordeaux" && place === "Centre ville") {
+        ev.image = AUDITORIUM_FALLBACK_IMAGE;
+        return ev;
+      }
+      if (ev.venue === "Théâtre Fémina" && place === "Triangle d'Or") {
+        ev.image = FEMINA_FALLBACK_IMAGE;
+        return ev;
+      }
+      if (ev.venue && ev.venue.includes("Agence Adie")) {
+        ev.image = ADIE_FALLBACK_IMAGE;
+      }
+      return ev;
+    }
+
+    function daysUntil(startIso) {
+      if (!startIso) return 0;
+      const start = new Date(startIso);
+      if (Number.isNaN(start.getTime())) return 0;
+      const now = new Date();
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const dayEvent = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const diff = Math.ceil((dayEvent - dayStart) / (24 * 60 * 60 * 1000));
+      return Math.max(0, diff);
+    }
+
+    function buildInternalLink(ev) {
+      const base = new URL("index_enriched.html", location.href);
+      base.hash = `uid=${encodeURIComponent(ev.uid)}&slug=${encodeURIComponent(ev.slug || "")}`;
+      return base.toString();
+    }
+
+    function buildPostText(ev) {
+      const where = [ev.venue, ev.district || ev.city].filter(Boolean).join(" · ");
+      const d = daysUntil(ev.start);
+      const link = buildInternalLink(ev);
+      return `C'est dans ${d} jour(s) ! ${ev.title} a ${where}. Pour plus d'informations, ${link}`;
+    }
+
+    async function copyText(value) {
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch {
+        prompt("Copie ce texte :", value);
+      }
+    }
+
+    function renderCard(ev) {
+      const where = [ev.venue, ev.district || ev.city].filter(Boolean).join(" · ");
+      const img = ev.image ? `<img loading="lazy" decoding="async" src="${ev.image}" alt="">` : "";
+      return `
+        <article class="card">
+          <div class="thumb">${img || "<span class='meta'>Aucune image</span>"}</div>
+          <div style="min-width:0; flex:1;">
+            <div class="title">${ev.title}</div>
+            <div class="meta">${where}</div>
+            <div class="meta">${ev.dateLabel || ""}</div>
+            <div class="actions">
+              <button class="btn" data-copy="post" data-uid="${ev.uid}">Copier le post</button>
+              <button class="ghost" data-copy="image" data-uid="${ev.uid}">Copier l'image</button>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    async function loadAndRender() {
+      document.getElementById("status").textContent = "Chargement…";
+      const res = await fetch(buildApiUrl());
+      const data = await res.json();
+      const rows = data.results || data.records || [];
+      let events = rows.map(normalize);
+      await loadImageMap();
+      events = events.map(applyImageEnrichment);
+      if (events.some(ev => !ev.image)) {
+        await loadManualImageMap();
+        events = events.map(applyManualImage).map(applyVenueFallbackImage);
+      }
+
+      document.getElementById("status").textContent = `${events.length} events`;
+      document.getElementById("list").innerHTML = events.map(renderCard).join("");
+
+      const byUid = new Map(events.map(ev => [String(ev.uid), ev]));
+      document.getElementById("list").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-copy]");
+        if (!btn) return;
+        const ev = byUid.get(String(btn.dataset.uid));
+        if (!ev) return;
+        if (btn.dataset.copy === "post") {
+          copyText(buildPostText(ev));
+          return;
+        }
+        if (btn.dataset.copy === "image") {
+          const url = ev.image || "";
+          copyText(url || "Aucune image");
+        }
+      }, { once: true });
+    }
+
+    document.getElementById("reload").addEventListener("click", loadAndRender);
+    loadAndRender();
+  </script>
+</body>
+</html>
