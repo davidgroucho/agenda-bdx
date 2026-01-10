@@ -323,6 +323,7 @@
     // Optional: manual overrides for missing images only.
     const MANUAL_IMAGE_URL = "assets/manual-images.json";
     let MANUAL_IMAGE_MAP = null;
+    const AUDITORIUM_FALLBACK_IMAGE = "https://lh3.googleusercontent.com/p/AF1QipPNYaRAe1gcbz-4dCGAcQbMOHmlHvtPba13rdHW=s680-w680-h510";
 
     async function loadImageMap() {
       if (IMAGE_MAP) return IMAGE_MAP;
@@ -403,6 +404,15 @@
       if (!m) return ev;
       const url = (typeof m === "string") ? m : (typeof m.url === "string" ? m.url : "");
       if (url) ev.image = url;
+      return ev;
+    }
+
+    function applyVenueFallbackImage(ev) {
+      if (ev.image) return ev;
+      const place = ev.district || ev.city;
+      if (ev.venue === "Auditorium de Bordeaux" && place === "Centre ville") {
+        ev.image = AUDITORIUM_FALLBACK_IMAGE;
+      }
       return ev;
     }
 
@@ -714,7 +724,7 @@
         let events = rows.map(normalize).map(applyImageEnrichment);
         if (events.some(ev => !ev.image)) {
           await loadManualImageMap();
-          events = events.map(applyManualImage);
+          events = events.map(applyManualImage).map(applyVenueFallbackImage);
         }
 
         const seen = new Set(all.map(e => e.uid));
