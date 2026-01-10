@@ -286,10 +286,7 @@
             <div class="meta">${where}</div>
             <div class="meta">${ev.dateLabel || ""}</div>
             <div class="actions">
-              <button class="btn" data-copy="post" data-uid="${ev.uid}">Copier le post</button>
-              <button class="ghost" data-copy="image" data-uid="${ev.uid}">Copier l'image</button>
-              <button class="ghost" data-copy="cmd" data-uid="${ev.uid}">Copier la commande</button>
-              <button class="ghost" data-copy="cmd-login" data-uid="${ev.uid}">Copier login + post</button>
+              <button class="btn" data-copy="cmd-full" data-uid="${ev.uid}">Copier la commande complète</button>
             </div>
           </div>
         </article>
@@ -324,22 +321,8 @@
           if (!btn) return;
           const ev = byUid.get(String(btn.dataset.uid));
           if (!ev) return;
-          if (btn.dataset.copy === "post") {
-            copyText(buildPostTextWithUrl(ev));
-            return;
-          }
-          if (btn.dataset.copy === "image") {
-            const url = ev.image || "";
-            copyText(url || "Aucune image");
-            return;
-          }
-          if (btn.dataset.copy === "cmd") {
-            const cmd = `PDSHOST="$PDSHOST" ACCESS_JWT="$ACCESS_JWT" DID="$DID" bash scripts/bs_post.sh ${JSON.stringify(buildPostText(ev))} ${JSON.stringify(ev.image || "")} ${JSON.stringify(buildInternalLink(ev))} ${JSON.stringify("ici")}`;
-            copyText(cmd);
-            return;
-          }
-          if (btn.dataset.copy === "cmd-login") {
-            const cmd = `eval "$(PDSHOST="$PDSHOST" bash scripts/bs_login.sh "$BS_HANDLE" "$BS_APP_PASSWORD")" && bash scripts/bs_post.sh ${JSON.stringify(buildPostText(ev))} ${JSON.stringify(ev.image || "")} ${JSON.stringify(buildInternalLink(ev))} ${JSON.stringify("ici")}`;
+          if (btn.dataset.copy === "cmd-full") {
+            const cmd = `PDSHOST="https://bsky.social" BS_HANDLE="bordeauxagenda.bsky.social" BS_APP_PASSWORD="YOUR_APP_PASSWORD" eval "$(PDSHOST="$PDSHOST" bash scripts/bs_login.sh "$BS_HANDLE" "$BS_APP_PASSWORD")" && PDSHOST="$PDSHOST" bash scripts/bs_post.sh ${JSON.stringify(buildPostText(ev))} ${JSON.stringify(ev.image || "")} ${JSON.stringify(buildInternalLink(ev))} ${JSON.stringify("ici")}`;
             copyText(cmd);
           }
         });
