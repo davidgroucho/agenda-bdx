@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || { echo "Missing command: $1" >&2; exit 1; }
+}
+
 if [[ $# -lt 3 ]]; then
-  echo "Usage: $0 \"POST_TEXT\" \"IMAGE_URL\" \"LINK_URL\" [\"LINK_TEXT\"]"
-  echo "Requires env: PDSHOST ACCESS_JWT DID"
+  echo "Usage: $0 \"POST_TEXT\" \"IMAGE_URL\" \"LINK_URL\" [\"LINK_TEXT\"]" >&2
+  echo "Requires env: PDSHOST ACCESS_JWT DID" >&2
   exit 1
 fi
 
@@ -13,42 +17,34 @@ LINK_URL="$3"
 LINK_TEXT="${4:-ici}"
 
 if [[ -z "${PDSHOST:-}" || -z "${ACCESS_JWT:-}" || -z "${DID:-}" ]]; then
-  echo "Missing env. Set PDSHOST, ACCESS_JWT, and DID."
+  echo "Missing env. Set PDSHOST, ACCESS_JWT, and DID." >&2
   exit 1
 fi
+
+require_cmd curl
+require_cmd python3
 
 TMP_IMG="$(mktemp /tmp/bs_image.XXXXXX)"
 cleanup() { rm -f "$TMP_IMG"; }
 trap cleanup EXIT
 
-curl -L "$IMAGE_URL" -o "$TMP_IMG"
+if ! curl -fsSL "$IMAGE_URL" -o "$TMP_IMG"; then
+  echo "Image download failed: $IMAGE_URL" >&2
+  exit 1
+fi
 
 BLOB_JSON="$(curl -sX POST "$PDSHOST/xrpc/com.atproto.repo.uploadBlob" \
   -H "Authorization: Bearer $ACCESS_JWT" \
   -H "Content-Type: image/jpeg" \
   --data-binary @"$TMP_IMG")"
 
-if ! echo "$BLOB_JSON" | python3 - <<'PY'
-import sys, json
-try:
-    data = json.load(sys.stdin)
-except Exception:
-    sys.exit(1)
-if "blob" not in data:
-    sys.exit(2)
-sys.exit(0)
-PY
-then
+read -r BLOB_REF BLOB_MIME BLOB_SIZE < <(printf '%s' "$BLOB_JSON" | python3 -c 'import json,sys; b=json.load(sys.stdin)["blob"]; print(b["ref"]["$link"], b["mimeType"], b["size"])') || {
   echo "Upload failed. Response:"
   echo "$BLOB_JSON"
   exit 1
-fi
+}
 
-BLOB_REF="$(echo "$BLOB_JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["blob"]["ref"]["$link"])')"
-BLOB_MIME="$(echo "$BLOB_JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["blob"]["mimeType"])')"
-BLOB_SIZE="$(echo "$BLOB_JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["blob"]["size"])')"
-
-PAYLOAD="$(python3 - <<'PY'
+PAYLOAD="$(python3 - "$POST_TEXT" "$LINK_URL" "$LINK_TEXT" "$DID" "$BLOB_REF" "$BLOB_MIME" "$BLOB_SIZE" <<'PY'
 import json, sys
 from datetime import datetime
 
@@ -94,7 +90,7 @@ payload = {
 }
 print(json.dumps(payload))
 PY
-  "$POST_TEXT" "$LINK_URL" "$LINK_TEXT" "$DID" "$BLOB_REF" "$BLOB_MIME" "$BLOB_SIZE")"
+)"
 
 curl -sX POST "$PDSHOST/xrpc/com.atproto.repo.createRecord" \
   -H "Content-Type: application/json" \
