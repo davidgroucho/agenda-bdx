@@ -238,11 +238,16 @@
     function buildPostText(ev) {
       const where = [ev.venue, ev.district || ev.city].filter(Boolean).join(" · ");
       const d = daysUntil(ev.start);
-      const link = buildInternalLink(ev);
       const when = (d === 0)
         ? "C'est aujourd'hui !"
         : (d === 1 ? "C'est demain !" : `C'est dans ${d} jour(s) !`);
-      return `${when} ${ev.title} a ${where}. Pour plus d'informations, ${link}`;
+      return `${when} ${ev.title} a ${where}. Pour plus d'informations, ici.`;
+    }
+
+    function buildPostTextWithUrl(ev) {
+      const base = buildPostText(ev);
+      const link = buildInternalLink(ev);
+      return `${base} ${link}`;
     }
 
     function copyText(value) {
@@ -319,7 +324,7 @@
           const ev = byUid.get(String(btn.dataset.uid));
           if (!ev) return;
           if (btn.dataset.copy === "post") {
-            copyText(buildPostText(ev));
+            copyText(buildPostTextWithUrl(ev));
             return;
           }
           if (btn.dataset.copy === "image") {
@@ -328,7 +333,7 @@
             return;
           }
           if (btn.dataset.copy === "cmd") {
-            const cmd = `PDSHOST=\"$PDSHOST\" ACCESS_JWT=\"$ACCESS_JWT\" DID=\"$DID\" bash scripts/bs_post.sh ${JSON.stringify(buildPostText(ev))} ${JSON.stringify(ev.image || "")}`;
+            const cmd = `PDSHOST=\"$PDSHOST\" ACCESS_JWT=\"$ACCESS_JWT\" DID=\"$DID\" bash scripts/bs_post.sh ${JSON.stringify(buildPostText(ev))} ${JSON.stringify(ev.image || "")} ${JSON.stringify(buildInternalLink(ev))} ${JSON.stringify("ici")}`;
             copyText(cmd);
           }
         }, { once: true });
