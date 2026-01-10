@@ -447,11 +447,16 @@
       x.setMonth(x.getMonth() + n);
       return x;
     }
+    function addDays(d, n) {
+      const x = new Date(d);
+      x.setDate(x.getDate() + n);
+      return x;
+    }
     function isoDate(d) { return d.toISOString().slice(0,10); }
 
     function buildApiUrl({ q = CULTURE_Q, limit = PAGE_SIZE, offset = 0 } = {}) {
       const now = new Date();
-      const end = addMonths(now, 6);
+      const end = addDays(now, 15);
       const nowIso = isoDate(now);
       const endIso = isoDate(end);
       const where = `(${DATE_FIELD} < date'${endIso}') AND ((${END_FIELD} >= date'${nowIso}') OR (${DATE_FIELD} >= date'${nowIso}'))`;
