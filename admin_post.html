@@ -334,12 +334,12 @@
             return;
           }
           if (btn.dataset.copy === "cmd") {
-            const cmd = `PDSHOST=\"$PDSHOST\" ACCESS_JWT=\"$ACCESS_JWT\" DID=\"$DID\" bash scripts/bs_post.sh ${JSON.stringify(buildPostText(ev))} ${JSON.stringify(ev.image || "")} ${JSON.stringify(buildInternalLink(ev))} ${JSON.stringify("ici")}`;
+            const cmd = `PDSHOST="$PDSHOST" ACCESS_JWT="$ACCESS_JWT" DID="$DID" bash scripts/bs_post.sh ${JSON.stringify(buildPostText(ev))} ${JSON.stringify(ev.image || "")} ${JSON.stringify(buildInternalLink(ev))} ${JSON.stringify("ici")}`;
             copyText(cmd);
             return;
           }
           if (btn.dataset.copy === "cmd-login") {
-            const cmd = `eval \"$(PDSHOST=\\\"$PDSHOST\\\" bash scripts/bs_login.sh \\\"$BS_HANDLE\\\" \\\"$BS_APP_PASSWORD\\\")\" && bash scripts/bs_post.sh ${JSON.stringify(buildPostText(ev))} ${JSON.stringify(ev.image || "")} ${JSON.stringify(buildInternalLink(ev))} ${JSON.stringify("ici")}`;
+            const cmd = `eval "$(PDSHOST="$PDSHOST" bash scripts/bs_login.sh "$BS_HANDLE" "$BS_APP_PASSWORD")" && bash scripts/bs_post.sh ${JSON.stringify(buildPostText(ev))} ${JSON.stringify(ev.image || "")} ${JSON.stringify(buildInternalLink(ev))} ${JSON.stringify("ici")}`;
             copyText(cmd);
           }
         }, { once: true });
