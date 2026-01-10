@@ -263,6 +263,7 @@
             <div class="actions">
               <button class="btn" data-copy="post" data-uid="${ev.uid}">Copier le post</button>
               <button class="ghost" data-copy="image" data-uid="${ev.uid}">Copier l'image</button>
+              <button class="ghost" data-copy="cmd" data-uid="${ev.uid}">Copier la commande</button>
             </div>
           </div>
         </article>
@@ -304,6 +305,11 @@
           if (btn.dataset.copy === "image") {
             const url = ev.image || "";
             copyText(url || "Aucune image");
+            return;
+          }
+          if (btn.dataset.copy === "cmd") {
+            const cmd = `PDSHOST=\"$PDSHOST\" ACCESS_JWT=\"$ACCESS_JWT\" DID=\"$DID\" bash scripts/bs_post.sh ${JSON.stringify(buildPostText(ev))} ${JSON.stringify(ev.image || "")}`;
+            copyText(cmd);
           }
         }, { once: true });
       } catch (e) {
