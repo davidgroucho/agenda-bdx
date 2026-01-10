@@ -195,10 +195,11 @@
       box-shadow: 0 10px 30px rgba(0,0,0,.15);
     }
     .modal.image {
-      max-width: 90vw;
+      max-width: 640px;
+      width: 100%;
     }
     .modal.image .modalbody { align-items: center; }
-    .modal.image img { width: 100%; height: auto; }
+    .modal.image img { max-width: 100%; max-height: 80vh; width: 100%; height: auto; object-fit: contain; }
     .modalhead {
       display:flex;
       align-items:flex-start;
