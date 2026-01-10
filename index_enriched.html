@@ -441,6 +441,10 @@
     let all = []; // accumulated events
     let allLoaded = false;
     let loadingAll = false;
+    let ongoing = [];
+    let ongoingOffset = 0;
+    let ongoingLoaded = false;
+    let loadingOngoing = false;
 
     function addMonths(d, n) {
       const x = new Date(d);
@@ -459,13 +463,28 @@
       const end = addDays(now, 15);
       const nowIso = isoDate(now);
       const endIso = isoDate(end);
-      const where = `(${DATE_FIELD} < date'${endIso}') AND ((${END_FIELD} >= date'${nowIso}') OR (${DATE_FIELD} >= date'${nowIso}'))`;
+      const where = `(${DATE_FIELD} >= date'${nowIso}') AND (${DATE_FIELD} < date'${endIso}')`;
 
       const u = new URL(BASE);
       u.searchParams.set("select", SELECT_FIELDS);
       u.searchParams.set("q", q);
       u.searchParams.set("where", where);
       u.searchParams.set("order_by", `${DATE_FIELD} asc`);
+      u.searchParams.set("limit", String(limit));
+      u.searchParams.set("offset", String(offset));
+      return u.toString();
+    }
+
+    function buildOngoingUrl({ q = CULTURE_Q, limit = PAGE_SIZE, offset = 0 } = {}) {
+      const now = new Date();
+      const nowIso = isoDate(now);
+      const where = `(${DATE_FIELD} < date'${nowIso}') AND (${END_FIELD} >= date'${nowIso}')`;
+
+      const u = new URL(BASE);
+      u.searchParams.set("select", SELECT_FIELDS);
+      u.searchParams.set("q", q);
+      u.searchParams.set("where", where);
+      u.searchParams.set("order_by", `${END_FIELD} asc`);
       u.searchParams.set("limit", String(limit));
       u.searchParams.set("offset", String(offset));
       return u.toString();
@@ -695,15 +714,18 @@
     function applyFiltersAndRender() {
       const q = document.getElementById("search").value.trim();
       const place = document.getElementById("place").value.trim();
+      const onlyOngoing = document.getElementById("onlyOngoing").checked;
+      const base = onlyOngoing ? ongoing : all;
 
-      const filtered = all
+      const filtered = base
         .filter(ev => matchesActiveCategories(ev))
         .filter(ev => matchesText(ev, q))
         .filter(ev => matchesPlace(ev, place))
         .filter(ev => matchesPrice(ev))
         .filter(ev => matchesOngoing(ev));
 
-      document.getElementById("status").textContent = `${filtered.length} affichés · ${all.length} chargés`;
+      const totalLoaded = onlyOngoing ? ongoing.length : all.length;
+      document.getElementById("status").textContent = `${filtered.length} affichés · ${totalLoaded} chargés`;
       document.getElementById("list").innerHTML = filtered.map(render).join("");
     }
 
@@ -765,6 +787,49 @@
       await fetchPage({ silent: false });
     }
 
+    async function fetchOngoingPage({ silent = false } = {}) {
+      clearError();
+      const btn = document.getElementById("loadMore");
+      if (!silent) {
+        btn.disabled = true;
+        btn.textContent = "Chargement…";
+      }
+
+      try {
+        const url = buildOngoingUrl({ offset: ongoingOffset, limit: PAGE_SIZE });
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
+
+        const data = await res.json();
+        const rows = data.results || data.records || [];
+        let events = rows.map(normalize).map(applyImageEnrichment);
+
+        if (events.some(ev => !ev.image)) {
+          await loadManualImageMap();
+          events = events.map(applyManualImage).map(applyVenueFallbackImage);
+        }
+
+        const seen = new Set([...all, ...ongoing].map(e => e.uid));
+        for (const ev of events) {
+          if (!ev.uid || seen.has(ev.uid)) continue;
+          seen.add(ev.uid);
+          ongoing.push(ev);
+        }
+
+        ongoingOffset += PAGE_SIZE;
+        return rows.length;
+
+      } catch (e) {
+        showError(String(e?.stack || e?.message || e));
+        return 0;
+      } finally {
+        if (!silent) {
+          btn.disabled = false;
+          btn.textContent = "Afficher plus";
+        }
+      }
+    }
+
     async function loadAllActiveEvents() {
       if (allLoaded || loadingAll) return;
       loadingAll = true;
@@ -781,6 +846,25 @@
       } finally {
         if (hadError) allLoaded = false;
         loadingAll = false;
+      }
+    }
+
+    async function loadAllOngoingEvents() {
+      if (ongoingLoaded || loadingOngoing) return;
+      loadingOngoing = true;
+      let hadError = false;
+      try {
+        let fetched = PAGE_SIZE;
+        while (fetched === PAGE_SIZE) {
+          fetched = await fetchOngoingPage({ silent: true });
+          if (fetched === 0) break;
+        }
+        if (fetched < PAGE_SIZE) ongoingLoaded = true;
+      } catch {
+        hadError = true;
+      } finally {
+        if (hadError) ongoingLoaded = false;
+        loadingOngoing = false;
       }
     }
 
@@ -889,8 +973,11 @@
         t = setTimeout(() => {
           const q = document.getElementById("search").value.trim();
           const place = document.getElementById("place").value.trim();
+          const onlyOngoing = document.getElementById("onlyOngoing").checked;
           if (q || place) {
-            loadAllActiveEvents().then(applyFiltersAndRender);
+            const loaders = [loadAllActiveEvents()];
+            if (onlyOngoing) loaders.push(loadAllOngoingEvents());
+            Promise.all(loaders).then(applyFiltersAndRender);
             return;
           }
           applyFiltersAndRender();
@@ -901,9 +988,23 @@
       document.getElementById("place").addEventListener("input", rerenderDebounced);
       document.getElementById("onlyFree").addEventListener("change", applyFiltersAndRender);
       document.getElementById("onlyPaid").addEventListener("change", applyFiltersAndRender);
-      document.getElementById("onlyOngoing").addEventListener("change", applyFiltersAndRender);
+      document.getElementById("onlyOngoing").addEventListener("change", () => {
+        const onlyOngoing = document.getElementById("onlyOngoing").checked;
+        if (onlyOngoing) {
+          loadAllOngoingEvents().then(applyFiltersAndRender);
+          return;
+        }
+        applyFiltersAndRender();
+      });
 
-      document.getElementById("loadMore").addEventListener("click", fetchNextPage);
+      document.getElementById("loadMore").addEventListener("click", () => {
+        const onlyOngoing = document.getElementById("onlyOngoing").checked;
+        if (onlyOngoing) {
+          loadAllOngoingEvents().then(applyFiltersAndRender);
+          return;
+        }
+        fetchNextPage();
+      });
 
       document.getElementById("chips").addEventListener("click", (e) => {
         const chip = e.target.closest(".chip");
