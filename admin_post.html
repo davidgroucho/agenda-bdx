@@ -242,11 +242,28 @@
       return `C'est dans ${d} jour(s) ! ${ev.title} a ${where}. Pour plus d'informations, ${link}`;
     }
 
-    async function copyText(value) {
+    function copyText(value) {
+      const text = String(value ?? "");
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch(() => {});
+        return;
+      }
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
       try {
-        await navigator.clipboard.writeText(value);
+        ok = document.execCommand("copy");
       } catch {
-        prompt("Copie ce texte :", value);
+        ok = false;
+      }
+      document.body.removeChild(ta);
+      if (!ok) {
+        prompt("Copie ce texte :", text);
       }
     }
 
