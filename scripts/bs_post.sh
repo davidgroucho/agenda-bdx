@@ -28,6 +28,22 @@ BLOB_JSON="$(curl -sX POST "$PDSHOST/xrpc/com.atproto.repo.uploadBlob" \
   -H "Content-Type: image/jpeg" \
   --data-binary @"$TMP_IMG")"
 
+if ! echo "$BLOB_JSON" | python3 - <<'PY'
+import sys, json
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+if "blob" not in data:
+    sys.exit(2)
+sys.exit(0)
+PY
+then
+  echo "Upload failed. Response:"
+  echo "$BLOB_JSON"
+  exit 1
+fi
+
 BLOB_REF="$(echo "$BLOB_JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["blob"]["ref"]["$link"])')"
 BLOB_MIME="$(echo "$BLOB_JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["blob"]["mimeType"])')"
 BLOB_SIZE="$(echo "$BLOB_JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["blob"]["size"])')"
