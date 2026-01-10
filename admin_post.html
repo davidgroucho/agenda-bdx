@@ -239,7 +239,10 @@
       const where = [ev.venue, ev.district || ev.city].filter(Boolean).join(" · ");
       const d = daysUntil(ev.start);
       const link = buildInternalLink(ev);
-      return `C'est dans ${d} jour(s) ! ${ev.title} a ${where}. Pour plus d'informations, ${link}`;
+      const when = (d === 0)
+        ? "C'est aujourd'hui !"
+        : (d === 1 ? "C'est demain !" : `C'est dans ${d} jour(s) !`);
+      return `${when} ${ev.title} a ${where}. Pour plus d'informations, ${link}`;
     }
 
     function copyText(value) {
