@@ -194,6 +194,11 @@
       padding: 14px;
       box-shadow: 0 10px 30px rgba(0,0,0,.15);
     }
+    .modal.image {
+      max-width: 90vw;
+    }
+    .modal.image .modalbody { align-items: center; }
+    .modal.image img { width: 100%; height: auto; }
     .modalhead {
       display:flex;
       align-items:flex-start;
@@ -215,6 +220,16 @@
     .modalbody .meta { color: #555; font-size: 13px; }
     .modalbody .long { font-size: 14px; line-height: 1.5; }
     .modalbody .links { display:flex; gap: 10px; flex-wrap:wrap; }
+    .thumbbtn {
+      border: 0;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      width: 100%;
+      height: 100%;
+      cursor: zoom-in;
+      display: block;
+    }
     .ghost {
       display:inline-flex; align-items:center;
       padding: 8px 10px;
@@ -594,7 +609,9 @@
         ? `<span class="badge">Jusqu’au ${escapeHtml(formatDateFr(ev.lastEnd))}</span>`
         : "";
 
-      const img = ev.image ? `<img loading="lazy" decoding="async" src="${escapeHtml(ev.image)}" alt="${escapeHtml(ev.title)}">` : "";
+      const img = ev.image
+        ? `<button class="thumbbtn" data-image="1" aria-label="Voir l'image en grand"><img loading="lazy" decoding="async" src="${escapeHtml(ev.image)}" alt="${escapeHtml(ev.title)}"></button>`
+        : "";
 
       const internal = `#uid=${encodeURIComponent(ev.uid)}&slug=${encodeURIComponent(ev.slug || "")}`;
 
@@ -714,9 +731,11 @@
     // Modal
     function openModal(ev) {
       const overlay = document.getElementById("overlay");
+      const modal = overlay.querySelector(".modal");
       const title = document.getElementById("modalTitle");
       const body = document.getElementById("modalBody");
 
+      modal.classList.remove("image");
       title.textContent = ev.title;
 
       const whenWhere = [
@@ -780,8 +799,29 @@
       }
     }
 
+    function openImageModal(ev) {
+      const overlay = document.getElementById("overlay");
+      const modal = overlay.querySelector(".modal");
+      const title = document.getElementById("modalTitle");
+      const body = document.getElementById("modalBody");
+
+      modal.classList.add("image");
+      title.textContent = ev.title || "Image";
+
+      const img = ev.image
+        ? `<img loading="lazy" decoding="async" src="${escapeHtml(ev.image)}" alt="${escapeHtml(ev.title || "Image")}">`
+        : `<div class="sub">Aucune image</div>`;
+
+      body.innerHTML = img;
+
+      overlay.style.display = "flex";
+      overlay.setAttribute("aria-hidden", "false");
+    }
+
     function closeModal() {
       const overlay = document.getElementById("overlay");
+      const modal = overlay.querySelector(".modal");
+      modal.classList.remove("image");
       overlay.style.display = "none";
       overlay.setAttribute("aria-hidden", "true");
     }
@@ -817,6 +857,16 @@
 
       // Modal events
       document.getElementById("list").addEventListener("click", (e) => {
+        const imgBtn = e.target.closest('[data-image="1"]');
+        if (imgBtn) {
+          const card = e.target.closest(".card");
+          const uid = card?.dataset?.uid;
+          if (!uid) return;
+          const ev = all.find(x => String(x.uid) === String(uid));
+          if (ev) openImageModal(ev);
+          return;
+        }
+
         const a = e.target.closest('a[data-details="1"]');
         if (!a) return;
         const card = e.target.closest(".card");
