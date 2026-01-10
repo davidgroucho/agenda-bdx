@@ -110,3 +110,5 @@ curl -sX POST "$PDSHOST/xrpc/com.atproto.repo.createRecord" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_JWT" \
   -d "$PAYLOAD"
+
+echo "SUCCESSFULLY POSTED TO BS VIA API"
