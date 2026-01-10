@@ -633,8 +633,7 @@
 
     function matchesOngoing(ev) {
       const onlyOngoing = document.getElementById("onlyOngoing").checked;
-      if (!onlyOngoing) return true;
-      return isOngoing(ev);
+      return onlyOngoing ? isOngoing(ev) : !isOngoing(ev);
     }
 
     function isOngoing(ev) {
