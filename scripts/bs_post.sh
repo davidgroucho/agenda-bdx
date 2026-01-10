@@ -33,6 +33,20 @@ if ! curl -fsSL "$IMAGE_URL" -o "$TMP_IMG"; then
   exit 1
 fi
 
+MAX_BYTES=$((900 * 1024))
+FILE_BYTES=$(wc -c < "$TMP_IMG" | tr -d ' ')
+if [[ "$FILE_BYTES" -gt "$MAX_BYTES" ]]; then
+  if command -v sips >/dev/null 2>&1; then
+    for max_px in 1400 1200 1000 800; do
+      sips -Z "$max_px" "$TMP_IMG" >/dev/null 2>&1 || true
+      FILE_BYTES=$(wc -c < "$TMP_IMG" | tr -d ' ')
+      if [[ "$FILE_BYTES" -le "$MAX_BYTES" ]]; then
+        break
+      fi
+    done
+  fi
+fi
+
 BLOB_JSON="$(curl -sX POST "$PDSHOST/xrpc/com.atproto.repo.uploadBlob" \
   -H "Authorization: Bearer $ACCESS_JWT" \
   -H "Content-Type: image/jpeg" \
