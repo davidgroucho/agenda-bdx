@@ -320,6 +320,10 @@
     const IMAGE_ENRICHMENT_URL = "assets/event-images.json";
     let IMAGE_MAP = null;
 
+    // Optional: manual overrides for missing images only.
+    const MANUAL_IMAGE_URL = "assets/manual-images.json";
+    let MANUAL_IMAGE_MAP = null;
+
     async function loadImageMap() {
       if (IMAGE_MAP) return IMAGE_MAP;
       try {
@@ -336,6 +340,19 @@
         IMAGE_MAP = {};
       }
       return IMAGE_MAP;
+    }
+
+    async function loadManualImageMap() {
+      if (MANUAL_IMAGE_MAP) return MANUAL_IMAGE_MAP;
+      try {
+        const res = await fetch(MANUAL_IMAGE_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("no manual map");
+        const data = await res.json();
+        MANUAL_IMAGE_MAP = data && typeof data === "object" ? data : {};
+      } catch {
+        MANUAL_IMAGE_MAP = {};
+      }
+      return MANUAL_IMAGE_MAP;
     }
 
     function openAgendaImageToUrl(u) {
@@ -374,6 +391,18 @@
       // Sometimes a better "official" page exists; keep existing if already set.
       if (!ev.externalUrl && typeof m.source_url === "string") ev.externalUrl = m.source_url;
 
+      return ev;
+    }
+
+    function applyManualImage(ev) {
+      if (ev.image) return ev;
+      if (!MANUAL_IMAGE_MAP) return ev;
+      const key1 = String(ev.uid ?? "");
+      const key2 = String(ev.slug ?? "");
+      const m = (key1 && MANUAL_IMAGE_MAP[key1]) || (key2 && MANUAL_IMAGE_MAP[key2]) || null;
+      if (!m) return ev;
+      const url = (typeof m === "string") ? m : (typeof m.url === "string" ? m.url : "");
+      if (url) ev.image = url;
       return ev;
     }
 
@@ -682,7 +711,11 @@
 
         const data = await res.json();
         const rows = data.results || data.records || [];
-        const events = rows.map(normalize).map(applyImageEnrichment);
+        let events = rows.map(normalize).map(applyImageEnrichment);
+        if (events.some(ev => !ev.image)) {
+          await loadManualImageMap();
+          events = events.map(applyManualImage);
+        }
 
         const seen = new Set(all.map(e => e.uid));
         for (const ev of events) {
