@@ -271,6 +271,7 @@
           <div class="toggles">
             <label class="toggle"><input type="checkbox" id="onlyFree" /> Gratuit</label>
             <label class="toggle"><input type="checkbox" id="onlyPaid" /> Payant</label>
+            <label class="toggle"><input type="checkbox" id="onlyOngoing" /> En cours</label>
           </div>
           <div class="field" style="min-width:220px; flex:1;">
             <input id="place" type="text" placeholder="commune/quartier (ex: Pessac, Chartrons…)" />
@@ -630,6 +631,12 @@
       return true;
     }
 
+    function matchesOngoing(ev) {
+      const onlyOngoing = document.getElementById("onlyOngoing").checked;
+      if (!onlyOngoing) return true;
+      return isOngoing(ev);
+    }
+
     function isOngoing(ev) {
       if (!ev.start || !ev.end) return false;
       const now = new Date();
@@ -689,7 +696,8 @@
         .filter(ev => matchesActiveCategories(ev))
         .filter(ev => matchesText(ev, q))
         .filter(ev => matchesPlace(ev, place))
-        .filter(ev => matchesPrice(ev));
+        .filter(ev => matchesPrice(ev))
+        .filter(ev => matchesOngoing(ev));
 
       document.getElementById("status").textContent = `${filtered.length} affichés · ${all.length} chargés`;
       document.getElementById("list").innerHTML = filtered.map(render).join("");
@@ -889,6 +897,7 @@
       document.getElementById("place").addEventListener("input", rerenderDebounced);
       document.getElementById("onlyFree").addEventListener("change", applyFiltersAndRender);
       document.getElementById("onlyPaid").addEventListener("change", applyFiltersAndRender);
+      document.getElementById("onlyOngoing").addEventListener("change", applyFiltersAndRender);
 
       document.getElementById("loadMore").addEventListener("click", fetchNextPage);
 
