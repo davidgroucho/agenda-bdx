@@ -326,6 +326,7 @@
     let MANUAL_IMAGE_MAP = null;
     const AUDITORIUM_FALLBACK_IMAGE = "https://lh3.googleusercontent.com/p/AF1QipPNYaRAe1gcbz-4dCGAcQbMOHmlHvtPba13rdHW=s680-w680-h510";
     const FEMINA_FALLBACK_IMAGE = "https://lh3.googleusercontent.com/gps-cs-s/AG0ilSzo_JP31b9T-lmJag6OXDc7CuGgTGcuvPWZdwpXfPWeYNIzoF2Tyu_lyJLOjYz5-fYxucWTTCRxxbHYhvaKrWQ2OJFyOcmM9bMkAmEb1tfsngJV43XpT9OU8iABwWWsRjEjRM2iPQ=s680-w680-h510";
+    const ADIE_FALLBACK_IMAGE = "https://lh3.googleusercontent.com/p/AF1QipMkRk6xJ2pLQN_DkRsG1PFfTQltbUGoY8iH_EHW=s680-w680-h510";
 
     async function loadImageMap() {
       if (IMAGE_MAP) return IMAGE_MAP;
@@ -418,6 +419,10 @@
       }
       if (ev.venue === "Théâtre Fémina" && place === "Triangle d'Or") {
         ev.image = FEMINA_FALLBACK_IMAGE;
+        return ev;
+      }
+      if (ev.venue && ev.venue.includes("Agence Adie")) {
+        ev.image = ADIE_FALLBACK_IMAGE;
       }
       return ev;
     }
