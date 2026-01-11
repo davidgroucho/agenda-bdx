@@ -878,6 +878,27 @@
       }
     }
 
+    async function fetchEventByUid(uid) {
+      if (!uid) return null;
+      const where = `uid = '${String(uid).replaceAll("'", "''")}'`;
+      const u = new URL(BASE);
+      u.searchParams.set("select", SELECT_FIELDS);
+      u.searchParams.set("where", where);
+      u.searchParams.set("limit", "1");
+
+      const res = await fetch(u.toString());
+      if (!res.ok) return null;
+      const data = await res.json();
+      const row = (data.results || data.records || [])[0];
+      if (!row) return null;
+      let ev = applyImageEnrichment(normalize(row));
+      if (!ev.image) {
+        await loadManualImageMap();
+        ev = applyVenueFallbackImage(applyManualImage(ev));
+      }
+      return ev;
+    }
+
     // Modal
     function openModal(ev) {
       const overlay = document.getElementById("overlay");
@@ -1059,8 +1080,16 @@
         const params = new URLSearchParams(location.hash.replace(/^#/, ""));
         const uid = params.get("uid");
         if (!uid) return;
-        const ev = all.find(x => String(x.uid) === String(uid));
-        if (ev) openModal(ev);
+        const ev = all.find(x => String(x.uid) === String(uid)) || ongoing.find(x => String(x.uid) === String(uid));
+        if (ev) {
+          openModal(ev);
+          return;
+        }
+        fetchEventByUid(uid).then((fetched) => {
+          if (!fetched) return;
+          all.push(fetched);
+          openModal(fetched);
+        });
       });
     }
 
@@ -1074,8 +1103,16 @@
       const params = new URLSearchParams(location.hash.replace(/^#/, ""));
       const uid = params.get("uid");
       if (uid) {
-        const ev = all.find(x => String(x.uid) === String(uid));
-        if (ev) openModal(ev);
+        const ev = all.find(x => String(x.uid) === String(uid)) || ongoing.find(x => String(x.uid) === String(uid));
+        if (ev) {
+          openModal(ev);
+        } else {
+          const fetched = await fetchEventByUid(uid);
+          if (fetched) {
+            all.push(fetched);
+            openModal(fetched);
+          }
+        }
       }
     }
 
