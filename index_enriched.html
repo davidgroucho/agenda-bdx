@@ -902,6 +902,7 @@
     // Modal
     function openModal(ev) {
       const overlay = document.getElementById("overlay");
+      document.body.style.overflow = "hidden";
       const modal = overlay.querySelector(".modal");
       const title = document.getElementById("modalTitle");
       const body = document.getElementById("modalBody");
@@ -972,6 +973,7 @@
 
     function openImageModal(ev) {
       const overlay = document.getElementById("overlay");
+      document.body.style.overflow = "hidden";
       const modal = overlay.querySelector(".modal");
       const title = document.getElementById("modalTitle");
       const body = document.getElementById("modalBody");
@@ -993,6 +995,7 @@
       const overlay = document.getElementById("overlay");
       const modal = overlay.querySelector(".modal");
       modal.classList.remove("image");
+      document.body.style.overflow = "";
       overlay.style.display = "none";
       overlay.setAttribute("aria-hidden", "true");
     }
