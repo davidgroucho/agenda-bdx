@@ -193,6 +193,8 @@
       width: 100%;
       padding: 14px;
       box-shadow: 0 10px 30px rgba(0,0,0,.15);
+      max-height: 90vh;
+      overflow: hidden;
     }
     .modal.image {
       max-width: 640px;
@@ -217,7 +219,7 @@
       font-weight: 650;
     }
     .close:hover { background: #f6f6f6; }
-    .modalbody { display:flex; flex-direction: column; gap: 10px; color: #222; }
+    .modalbody { display:flex; flex-direction: column; gap: 10px; color: #222; overflow:auto; }
     .modalbody .meta { color: #555; font-size: 13px; }
     .modalbody .long { font-size: 14px; line-height: 1.5; }
     .modalbody .links { display:flex; gap: 10px; flex-wrap:wrap; }
